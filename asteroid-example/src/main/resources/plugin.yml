@@ -1,0 +1,12 @@
+name: AsteroidExample
+version: '1.0.0'
+main: priv.seventeen.artist.asteroid.example.AsteroidExamplePlugin
+api-version: '1.18'
+author: 17Artist
+description: Asteroid NMS Library Example Plugin
+
+commands:
+  asteroid:
+    description: Asteroid example commands
+    usage: /asteroid <entity|mount|boat|itemtag|fakeop|ai|folia|packet>
+    permission: asteroid.admin
