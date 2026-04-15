@@ -25,11 +25,8 @@ import priv.seventeen.artist.asteroid.item.IItemStackNMS;
 import priv.seventeen.artist.asteroid.item.ItemTag;
 import priv.seventeen.artist.asteroid.util.FakeOp;
 
-import java.util.logging.Logger;
-
 public final class NMSLoader {
 
-    private static final Logger LOGGER = Logger.getLogger("Asteroid");
     private static final String BASE_PACKAGE = "priv.seventeen.artist.asteroid.nms.";
 
     private NMSLoader() {}
@@ -38,8 +35,6 @@ public final class NMSLoader {
         String version = VersionDetector.detectVersion();
         String suffix = VersionDetector.getNmsVersionSuffix();
         String pkg = BASE_PACKAGE + suffix + ".";
-
-        LOGGER.info("[Asteroid] Loading NMS implementations for " + version + " (package: " + suffix + ")");
 
         try {
             IEntityNMS entityNMS = instantiate(pkg + "EntityNMSImpl");
@@ -57,8 +52,6 @@ public final class NMSLoader {
 
             AsteroidAPI.init(entityNMS, itemStackNMS, factory, packetHandler, mobAI, itemTagBridge, fakeOpExecutor, attributeBridge);
             AsteroidAPI.setMcVersion(version);
-
-            LOGGER.info("[Asteroid] NMS implementations loaded successfully.");
         } catch (Exception e) {
             throw new RuntimeException("[Asteroid] Failed to load NMS implementations for version: " + version, e);
         }
@@ -68,8 +61,6 @@ public final class NMSLoader {
         String version = VersionDetector.detectVersion();
         String suffix = VersionDetector.getNmsVersionSuffix();
         String pkg = BASE_PACKAGE + suffix + ".";
-
-        LOGGER.info("[Asteroid] Loading NMS implementations for " + version + " (package: " + suffix + ")");
 
         try {
             IEntityNMS entityNMS = instantiate(pkg + "EntityNMSImpl");
@@ -86,8 +77,6 @@ public final class NMSLoader {
 
             AsteroidAPI.init(entityNMS, itemStackNMS, factory, packetHandler, mobAI, itemTagBridge, fakeOpExecutor, attributeBridge);
             AsteroidAPI.setMcVersion(version);
-
-            LOGGER.info("[Asteroid] NMS implementations loaded successfully.");
         } catch (Exception e) {
             throw new RuntimeException("[Asteroid] Failed to load NMS implementations for version: " + version, e);
         }

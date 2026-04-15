@@ -17,11 +17,7 @@ package priv.seventeen.artist.asteroid.internal;
 
 import org.bukkit.Bukkit;
 
-import java.util.logging.Logger;
-
 public final class VersionDetector {
-
-    private static final Logger LOGGER = Logger.getLogger("Asteroid");
 
     private static String mcVersion;
     private static String nmsPackageVersion;
@@ -38,7 +34,6 @@ public final class VersionDetector {
             throw new RuntimeException("Cannot detect MC version from: " + serverVersion);
         }
         mcVersion = parts[1].trim().replace(")", "").trim();
-        LOGGER.info("[Asteroid] Detected MC version: " + mcVersion);
         return mcVersion;
     }
 
