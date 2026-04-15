@@ -88,7 +88,6 @@ public final class NMSLoader {
             AsteroidAPI.setMcVersion(version);
 
             LOGGER.info("[Asteroid] NMS implementations loaded successfully.");
-            LOGGER.warning("[Asteroid] PacketHandler events not registered (no Plugin provided). Call getPacketHandler().inject() manually or use load(Plugin).");
         } catch (Exception e) {
             throw new RuntimeException("[Asteroid] Failed to load NMS implementations for version: " + version, e);
         }
