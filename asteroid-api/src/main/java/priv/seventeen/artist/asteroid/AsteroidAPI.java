@@ -21,14 +21,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import priv.seventeen.artist.asteroid.attribute.AttributeBridge;
+import priv.seventeen.artist.asteroid.attribute.IAttributeItemNMS;
 import priv.seventeen.artist.asteroid.entity.CustomEntity;
 import priv.seventeen.artist.asteroid.entity.CustomEntityFactory;
 import priv.seventeen.artist.asteroid.entity.IEntityNMS;
 import priv.seventeen.artist.asteroid.entity.ai.IMobAI;
+import priv.seventeen.artist.asteroid.item.IGlintNMS;
 import priv.seventeen.artist.asteroid.item.IItemStackNMS;
 import priv.seventeen.artist.asteroid.item.ItemTag;
 import priv.seventeen.artist.asteroid.packet.IPacketHandler;
 import priv.seventeen.artist.asteroid.packet.PacketListener;
+import priv.seventeen.artist.asteroid.skull.ISkullNMS;
 import priv.seventeen.artist.asteroid.util.FakeOp;
 
 public final class AsteroidAPI {
@@ -39,19 +42,27 @@ public final class AsteroidAPI {
     private static IPacketHandler packetHandler;
     private static IMobAI mobAI;
     private static AttributeBridge attributeBridge;
+    private static ISkullNMS skullNMS;
+    private static IGlintNMS glintNMS;
+    private static IAttributeItemNMS attributeItemNMS;
 
     private AsteroidAPI() {}
 
     public static void init(IEntityNMS entityNMS, IItemStackNMS itemStackNMS,
                             CustomEntityFactory factory, IPacketHandler packetHandler,
                             IMobAI mobAI, ItemTag.Bridge itemTagBridge,
-                            FakeOp.Executor fakeOpExecutor, AttributeBridge attributeBridge) {
+                            FakeOp.Executor fakeOpExecutor, AttributeBridge attributeBridge,
+                            ISkullNMS skullNMS, IGlintNMS glintNMS,
+                            IAttributeItemNMS attributeItemNMS) {
         AsteroidAPI.entityNMS = entityNMS;
         AsteroidAPI.itemStackNMS = itemStackNMS;
         AsteroidAPI.customEntityFactory = factory;
         AsteroidAPI.packetHandler = packetHandler;
         AsteroidAPI.mobAI = mobAI;
         AsteroidAPI.attributeBridge = attributeBridge;
+        AsteroidAPI.skullNMS = skullNMS;
+        AsteroidAPI.glintNMS = glintNMS;
+        AsteroidAPI.attributeItemNMS = attributeItemNMS;
         ItemTag.setBridge(itemTagBridge);
         FakeOp.setExecutor(fakeOpExecutor);
     }
@@ -102,6 +113,21 @@ public final class AsteroidAPI {
     public static AttributeBridge getAttributeBridge() {
         checkInit(attributeBridge, "AttributeBridge");
         return attributeBridge;
+    }
+
+    public static ISkullNMS getSkullNMS() {
+        checkInit(skullNMS, "SkullNMS");
+        return skullNMS;
+    }
+
+    public static IGlintNMS getGlintNMS() {
+        checkInit(glintNMS, "GlintNMS");
+        return glintNMS;
+    }
+
+    public static IAttributeItemNMS getAttributeItemNMS() {
+        checkInit(attributeItemNMS, "AttributeItemNMS");
+        return attributeItemNMS;
     }
 
     private static String mcVersion;

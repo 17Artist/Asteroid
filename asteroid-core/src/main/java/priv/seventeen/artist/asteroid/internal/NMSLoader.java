@@ -18,11 +18,14 @@ package priv.seventeen.artist.asteroid.internal;
 import org.bukkit.plugin.Plugin;
 import priv.seventeen.artist.asteroid.AsteroidAPI;
 import priv.seventeen.artist.asteroid.attribute.AttributeBridge;
+import priv.seventeen.artist.asteroid.attribute.IAttributeItemNMS;
 import priv.seventeen.artist.asteroid.entity.CustomEntityFactory;
 import priv.seventeen.artist.asteroid.entity.IEntityNMS;
 import priv.seventeen.artist.asteroid.entity.ai.IMobAI;
+import priv.seventeen.artist.asteroid.item.IGlintNMS;
 import priv.seventeen.artist.asteroid.item.IItemStackNMS;
 import priv.seventeen.artist.asteroid.item.ItemTag;
+import priv.seventeen.artist.asteroid.skull.ISkullNMS;
 import priv.seventeen.artist.asteroid.util.FakeOp;
 
 public final class NMSLoader {
@@ -44,13 +47,16 @@ public final class NMSLoader {
             ItemTag.Bridge itemTagBridge = instantiate(pkg + "ItemTagBridgeImpl");
             FakeOp.Executor fakeOpExecutor = instantiate(pkg + "FakeOpExecutorImpl");
             AttributeBridge attributeBridge = instantiate(pkg + "AttributeBridgeImpl");
+            ISkullNMS skullNMS = instantiate(pkg + "SkullNMSImpl");
+            IGlintNMS glintNMS = instantiate(pkg + "GlintNMSImpl");
+            IAttributeItemNMS attributeItemNMS = instantiate(pkg + "AttributeItemNMSImpl");
 
             PacketHandlerImpl packetHandler = new PacketHandlerImpl();
             PacketHandlerImpl.ChannelProvider channelProvider = instantiate(pkg + "PacketChannelProviderImpl");
             packetHandler.setChannelProvider(channelProvider);
             packetHandler.registerEvents(plugin);
 
-            AsteroidAPI.init(entityNMS, itemStackNMS, factory, packetHandler, mobAI, itemTagBridge, fakeOpExecutor, attributeBridge);
+            AsteroidAPI.init(entityNMS, itemStackNMS, factory, packetHandler, mobAI, itemTagBridge, fakeOpExecutor, attributeBridge, skullNMS, glintNMS, attributeItemNMS);
             AsteroidAPI.setMcVersion(version);
         } catch (Exception e) {
             throw new RuntimeException("[Asteroid] Failed to load NMS implementations for version: " + version, e);
@@ -70,12 +76,15 @@ public final class NMSLoader {
             ItemTag.Bridge itemTagBridge = instantiate(pkg + "ItemTagBridgeImpl");
             FakeOp.Executor fakeOpExecutor = instantiate(pkg + "FakeOpExecutorImpl");
             AttributeBridge attributeBridge = instantiate(pkg + "AttributeBridgeImpl");
+            ISkullNMS skullNMS = instantiate(pkg + "SkullNMSImpl");
+            IGlintNMS glintNMS = instantiate(pkg + "GlintNMSImpl");
+            IAttributeItemNMS attributeItemNMS = instantiate(pkg + "AttributeItemNMSImpl");
 
             PacketHandlerImpl packetHandler = new PacketHandlerImpl();
             PacketHandlerImpl.ChannelProvider channelProvider = instantiate(pkg + "PacketChannelProviderImpl");
             packetHandler.setChannelProvider(channelProvider);
 
-            AsteroidAPI.init(entityNMS, itemStackNMS, factory, packetHandler, mobAI, itemTagBridge, fakeOpExecutor, attributeBridge);
+            AsteroidAPI.init(entityNMS, itemStackNMS, factory, packetHandler, mobAI, itemTagBridge, fakeOpExecutor, attributeBridge, skullNMS, glintNMS, attributeItemNMS);
             AsteroidAPI.setMcVersion(version);
         } catch (Exception e) {
             throw new RuntimeException("[Asteroid] Failed to load NMS implementations for version: " + version, e);
