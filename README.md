@@ -1,11 +1,11 @@
 # Asteroid
 
-Minecraft NMS 跨版本操作库，覆盖 1.18.2 ~ 26.1。
+Minecraft NMS 跨版本操作库，覆盖 1.18.2 ~ 26.2。
 
 
 ## 支持版本
 
-1.18.2 / 1.19 / 1.19.3 / 1.19.4 / 1.20.1 / 1.20.2 / 1.20.4 / 1.20.6 / 1.21.1 / 1.21.3 / 1.21.4 / 1.21.5 / 1.21.8 / 1.21.11 / 26.1
+1.18.2 / 1.19 / 1.19.3 / 1.19.4 / 1.20.1 / 1.20.2 / 1.20.4 / 1.20.6 / 1.21.1 / 1.21.3 / 1.21.4 / 1.21.5 / 1.21.8 / 1.21.11 / 26.1.1 / 26.1.2 / 26.2
 
 兼容 Paper / Spigot / Folia。
 
@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    implementation("priv.seventeen.artist.asteroid:asteroid-nms:1.0.1")
+    implementation("priv.seventeen.artist.asteroid:asteroid-nms:1.2.0")
 }
 ```
 
@@ -26,7 +26,7 @@ dependencies {
 如果只需要编译时接口（不打包 NMS 实现）：
 
 ```kotlin
-compileOnly("priv.seventeen.artist.asteroid:asteroid-api:1.0.1")
+compileOnly("priv.seventeen.artist.asteroid:asteroid-api:1.2.0")
 ```
 
 ## 初始化
