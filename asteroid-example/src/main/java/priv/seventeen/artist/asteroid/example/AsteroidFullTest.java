@@ -34,6 +34,8 @@ import priv.seventeen.artist.asteroid.item.ItemTag;
 import priv.seventeen.artist.asteroid.item.ItemTagData;
 import priv.seventeen.artist.asteroid.packet.*;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -71,6 +73,7 @@ public class AsteroidFullTest {
         testMobAI();
         testPacketType();
         testPacketBuilder();
+        testEntityVelocityValue();
         testPacketListener();
         testFoliaScheduler();
 
@@ -330,6 +333,47 @@ public class AsteroidFullTest {
             if (packet == null) throw new RuntimeException("packet is null");
             ok("Packets.entityDestroy");
         } catch (Throwable e) { fail("Packets.entityDestroy", e); }
+    }
+
+    private void testEntityVelocityValue() {
+        // 验证 Packets.entityVelocity 的换算正确性：协议编码值(×8000) 应还原为实际 block/tick。
+        // entityVelocity(1, 0, 8000, 0) 期望速度向量为 (0, 1.0, 0)。
+        try {
+            Object packet = Packets.entityVelocity(1, 0, 8000, 0);
+            if (packet == null) throw new RuntimeException("packet is null");
+
+            Object vec3 = null;
+            for (Field f : packet.getClass().getDeclaredFields()) {
+                if (f.getType().getSimpleName().equals("Vec3")) {
+                    f.setAccessible(true);
+                    vec3 = f.get(packet);
+                    break;
+                }
+            }
+
+            if (vec3 != null) {
+                // 现代版本：record(int id, Vec3 movement)，Vec3.x/y/z 为公有 double 字段
+                double x = vec3.getClass().getField("x").getDouble(vec3);
+                double y = vec3.getClass().getField("y").getDouble(vec3);
+                double z = vec3.getClass().getField("z").getDouble(vec3);
+                if (Math.abs(x) > 1e-6 || Math.abs(y - 1.0) > 1e-6 || Math.abs(z) > 1e-6)
+                    throw new RuntimeException("velocity mismatch: (" + x + ", " + y + ", " + z + "), expected (0, 1.0, 0)");
+                ok("Packets.entityVelocity value (Vec3 = 0, 1.0, 0)");
+            } else {
+                // 旧版本：速度以独立 int 字段(编码值)存储，应能找到 8000
+                boolean found = false;
+                for (Field f : packet.getClass().getDeclaredFields()) {
+                    if (f.getType() == int.class && !Modifier.isStatic(f.getModifiers())) {
+                        f.setAccessible(true);
+                        if (f.getInt(packet) == 8000) { found = true; break; }
+                    }
+                }
+                if (!found) throw new RuntimeException("legacy encoded velocity 8000 not found in int fields");
+                ok("Packets.entityVelocity value (legacy int field = 8000)");
+            }
+        } catch (Throwable e) {
+            fail("Packets.entityVelocity value", e);
+        }
     }
 
     private void testPacketListener() {

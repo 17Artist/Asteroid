@@ -14,13 +14,18 @@ dependencies {
     "shade"(project(":asteroid-core"))
 }
 
+// 所有 NMS 版本打入同一个 jar：
+//   - 1.x 模块走 reobf（Spigot 映射），用 reobfJar 产物；
+//   - 26.x 模块（Mojang 映射 + Java 25 字节码）禁用了 reobfJar，用普通 jar 产物。
+// 不同字节码版本可共存于一个 jar：类按需懒加载，NMSLoader 只精确加载当前服务端版本的实现类，
+// 低版本服务端永远不会触碰 26.x 的 Java 25 类（反之亦然），因此不会触发 UnsupportedClassVersionError。
 tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
     configurations = listOf(project.configurations.getByName("shade"))
     exclude("META-INF/**")
     archiveClassifier.set("")
 
     project.parent?.subprojects?.filter {
-        it.path.startsWith(":nms:") && it.name != "v26_1"
+        it.path.startsWith(":nms:")
     }?.forEach { nmsProject ->
         val reobfTask = nmsProject.tasks.findByName("reobfJar")
         if (reobfTask != null && reobfTask.enabled) {
@@ -35,25 +40,8 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     }
 }
 
-val v26_1Project = project.parent?.subprojects?.find { it.name == "v26_1" }
-if (v26_1Project != null) {
-    tasks.register<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar26") {
-        configurations = listOf(project.configurations.getByName("shade"))
-        exclude("META-INF/**")
-        archiveClassifier.set("mc26")
-
-        val jar = v26_1Project.tasks.named("jar")
-        dependsOn(jar)
-        from(zipTree(jar.map { (it as org.gradle.jvm.tasks.Jar).archiveFile.get().asFile }))
-    }
-
-    tasks.named("build") {
-        dependsOn("shadowJar", "shadowJar26")
-    }
-} else {
-    tasks.named("build") {
-        dependsOn("shadowJar")
-    }
+tasks.named("build") {
+    dependsOn("shadowJar")
 }
 
 val repoPassword = System.getenv("repo") ?: ""
