@@ -166,14 +166,16 @@ Packets.sendEntityHeadRotation(player, entityId, 90F);
 Packets.sendSetPassengers(player, vehicleId, passengerId1, passengerId2);
 Packets.sendSetCamera(player, entityId);
 
-// 语义化构造
-Object packet = PacketBuilder.create(PacketType.Play.Server.ENTITY_VELOCITY)
-    .writeSemantic("entityId", player.getEntityId())
-    .writeSemantic("velocityX", 0)
-    .writeSemantic("velocityY", 8000)
-    .writeSemantic("velocityZ", 0)
+// 语义化构造（适用于跨版本字段稳定的包）
+Object packet = PacketBuilder.create(PacketType.Play.Server.ENTITY_HEAD_ROTATION)
+    .writeSemantic("entityId", entityId)
+    .writeSemantic("headYaw", (byte) 64)
     .getPacket();
 AsteroidAPI.getPacketHandler().sendPacket(player, packet);
+
+// 注意：实体速度包在 1.20.5+ / 26.x 已将 x/y/z 合并为单个 Vec3 字段，
+// 不能再用 writeSemantic("velocityX") 逐分量写入。请直接用工厂方法（已自动适配新旧两种结构）：
+Packets.sendEntityVelocity(player, entityId, 0, 8000, 0);
 
 // 底层字段读写
 PacketFields fields = PacketFields.of(nmsPacket);
@@ -273,6 +275,60 @@ IItemStackNMS itemNms = AsteroidAPI.getItemStackNMS();
 
 String json = itemNms.item2Json(itemStack);     // 物品 → JSON（SNBT 格式）
 ItemStack item = itemNms.json2Item(json);        // JSON → 物品
+```
+
+---
+
+## 头颅纹理
+
+通过 URL 或 Base64 设置 / 读取头颅皮肤纹理，跨版本统一（自动处理 GameProfile / ResolvableProfile 等底层差异）。
+
+```java
+ISkullNMS skull = AsteroidAPI.getSkullNMS();
+
+SkullMeta meta = (SkullMeta) item.getItemMeta();
+// URL 或 Base64 自动识别
+skull.setTexture(meta, "http://textures.minecraft.net/texture/<hash>");
+// skull.setTexture(meta, "eyJ0ZXh0dXJlcyI6ey...");  // 或 Base64
+item.setItemMeta(meta);
+
+String url = skull.getTexture(meta);  // 读取纹理 URL，无则返回 null
+```
+
+---
+
+## 物品发光
+
+无需附魔即可让物品发光，跨版本统一（高版本用 glint override 组件，低版本用隐藏附魔）。
+
+```java
+IGlintNMS glint = AsteroidAPI.getGlintNMS();
+
+ItemMeta meta = item.getItemMeta();
+glint.setGlint(meta, true);          // 开启发光
+boolean g = glint.hasGlint(meta);    // 是否发光
+glint.removeGlint(meta);             // 移除发光
+item.setItemMeta(meta);
+```
+
+---
+
+## 物品属性修饰符
+
+向物品 Meta 写入原版属性修饰符（穿戴 / 手持时生效），跨版本统一（1.20.4 及以下用 UUID，1.21+ 用 ResourceLocation）。
+
+```java
+IAttributeItemNMS attrItem = AsteroidAPI.getAttributeItemNMS();
+
+ItemMeta meta = item.getItemMeta();
+// 属性名 / key / 数值 / operation(0=加法, 1=基础乘法, 2=最终乘法) / 槽位
+attrItem.addModifier(meta, "minecraft:generic.max_health", "myplugin:hp", 4.0, 0, "hand");
+// slot 可为 "hand","head","chest","legs","feet","offhand"；传 null 表示所有槽位
+attrItem.addModifier(meta, "minecraft:generic.attack_damage", "myplugin:dmg", 2.0, 0, null);
+
+// 移除某属性的修饰符
+attrItem.removeModifier(meta, "minecraft:generic.max_health");
+item.setItemMeta(meta);
 ```
 
 ---

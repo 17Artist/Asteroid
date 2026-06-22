@@ -48,6 +48,7 @@ NMSLoader.load(this);
 - 实体 NMS 操作（碰撞箱、位置、朝向、可见玩家遍历）
 - 生物 AI Goal 操作
 - 物品 JSON 序列化 / 反序列化
+- 头颅纹理、物品发光、物品属性修饰符（跨版本统一）
 - FakeOp 临时权限执行
 - Folia / Paper / Spigot 统一调度器
 
