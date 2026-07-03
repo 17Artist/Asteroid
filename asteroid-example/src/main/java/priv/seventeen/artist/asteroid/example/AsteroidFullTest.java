@@ -74,6 +74,7 @@ public class AsteroidFullTest {
         testPacketType();
         testPacketBuilder();
         testEntityVelocityValue();
+        testJson2ItemLegacy();
         testPacketListener();
         testFoliaScheduler();
 
@@ -373,6 +374,44 @@ public class AsteroidFullTest {
             }
         } catch (Throwable e) {
             fail("Packets.entityVelocity value", e);
+        }
+    }
+
+    private void testJson2ItemLegacy() {
+        // 跨版本反序列化：1.21.5 之前 attribute_modifiers 组件带 show_in_tooltip，
+        // 新版本 CODEC 直接解码会抛 "Not a list"，需经 DataFixerUpper 升级。
+        // 仅组件化版本(1.20.5+)适用；更早版本没有 components 格式，跳过。
+        try {
+            String mc = AsteroidAPI.getMcVersion();
+            if (!supportsComponents(mc)) {
+                ok("json2Item legacy component data (跳过：非组件化版本)");
+                return;
+            }
+            String legacy = "{id:\"minecraft:diamond_sword\",count:1,"
+                    + "components:{\"minecraft:attribute_modifiers\":{modifiers:[],show_in_tooltip:0b}}}";
+            ItemStack item = AsteroidAPI.getItemStackNMS().json2Item(legacy);
+            if (item == null || item.getType() == org.bukkit.Material.AIR) {
+                throw new RuntimeException("legacy item json 解析结果为 null/AIR");
+            }
+            ok("json2Item legacy component data (attribute_modifiers show_in_tooltip)");
+        } catch (Throwable e) {
+            fail("json2Item legacy component data", e);
+        }
+    }
+
+    private static boolean supportsComponents(String v) {
+        if (v == null) return true;
+        try {
+            String[] p = v.split("\\.");
+            int major = Integer.parseInt(p[0]);
+            if (major != 1) return true;                       // 26.x 及未来大版本均为组件化
+            int minor = p.length > 1 ? Integer.parseInt(p[1]) : 0;
+            if (minor > 20) return true;                        // 1.21+
+            if (minor < 20) return false;                       // 1.19 及以下
+            int patch = p.length > 2 ? Integer.parseInt(p[2]) : 0;
+            return patch >= 5;                                  // 1.20.5+
+        } catch (Exception e) {
+            return true;
         }
     }
 

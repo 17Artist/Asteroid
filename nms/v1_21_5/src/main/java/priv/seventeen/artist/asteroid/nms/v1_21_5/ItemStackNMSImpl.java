@@ -31,15 +31,33 @@ public class ItemStackNMSImpl implements IItemStackNMS {
         return nms.save(CraftRegistry.getMinecraftRegistry()).toString();
     }
 
+    // 1.20.5：数据组件(components)格式引入时的数据版本；旧数据未内嵌 DataVersion，以此为下界跑数据修复。
+    private static final int MIN_COMPONENT_DATA_VERSION = 3837;
+
     @Override
     public ItemStack json2Item(String json) {
         try {
             CompoundTag tag = TagParser.parseCompoundFully(json);
-            net.minecraft.world.item.ItemStack nms =
-                    net.minecraft.world.item.ItemStack.parse(CraftRegistry.getMinecraftRegistry(), tag).orElseThrow();
-            return CraftItemStack.asBukkitCopy(nms);
+            var registry = CraftRegistry.getMinecraftRegistry();
+            java.util.Optional<net.minecraft.world.item.ItemStack> parsed =
+                    net.minecraft.world.item.ItemStack.parse(registry, tag);
+            if (parsed.isEmpty()) {
+                // 直接解码失败：多为旧版本(如 1.21.5 之前 attribute_modifiers 等组件仍带 show_in_tooltip)
+                // 序列化的数据，用 DataFixerUpper 升级到当前版本后重试。
+                parsed = net.minecraft.world.item.ItemStack.parse(registry, upgradeItemTag(tag));
+            }
+            return CraftItemStack.asBukkitCopy(parsed.orElseThrow());
         } catch (CommandSyntaxException e) {
             throw new RuntimeException("Failed to parse item JSON", e);
         }
+    }
+
+    private static CompoundTag upgradeItemTag(CompoundTag tag) {
+        int current = net.minecraft.SharedConstants.getCurrentVersion().getDataVersion().getVersion();
+        com.mojang.serialization.Dynamic<net.minecraft.nbt.Tag> input =
+                new com.mojang.serialization.Dynamic<>(net.minecraft.nbt.NbtOps.INSTANCE, tag);
+        com.mojang.serialization.Dynamic<net.minecraft.nbt.Tag> out = net.minecraft.util.datafix.DataFixers.getDataFixer()
+                .update(net.minecraft.util.datafix.fixes.References.ITEM_STACK, input, MIN_COMPONENT_DATA_VERSION, current);
+        return (CompoundTag) out.getValue();
     }
 }
