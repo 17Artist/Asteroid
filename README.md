@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    implementation("priv.seventeen.artist.asteroid:asteroid-nms:1.2.1")
+    implementation("priv.seventeen.artist.asteroid:asteroid-nms:1.2.2")
 }
 ```
 
@@ -26,7 +26,7 @@ dependencies {
 如果只需要编译时接口（不打包 NMS 实现）：
 
 ```kotlin
-compileOnly("priv.seventeen.artist.asteroid:asteroid-api:1.2.1")
+compileOnly("priv.seventeen.artist.asteroid:asteroid-api:1.2.2")
 ```
 
 ## 初始化
