@@ -18,6 +18,8 @@ package priv.seventeen.artist.asteroid.packet;
 import org.bukkit.entity.Player;
 import priv.seventeen.artist.asteroid.AsteroidAPI;
 
+import java.lang.reflect.Constructor;
+
 public final class Packets {
 
     private Packets() {}
@@ -36,7 +38,7 @@ public final class Packets {
             Class<?> vec3 = Class.forName("net.minecraft.world.phys.Vec3");
             Object movement = vec3.getConstructor(double.class, double.class, double.class)
                     .newInstance(vx / 8000.0, vy / 8000.0, vz / 8000.0);
-            java.lang.reflect.Constructor<?> ctor = clazz.getDeclaredConstructor(int.class, vec3);
+            Constructor<?> ctor = clazz.getDeclaredConstructor(int.class, vec3);
             ctor.setAccessible(true);
             return ctor.newInstance(entityId, movement);
         } catch (Throwable modern) {

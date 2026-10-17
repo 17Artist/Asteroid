@@ -20,6 +20,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import priv.seventeen.artist.asteroid.AsteroidAPI;
 import priv.seventeen.artist.asteroid.internal.NMSLoader;
 
 public class AsteroidExamplePlugin extends JavaPlugin {
@@ -28,7 +29,7 @@ public class AsteroidExamplePlugin extends JavaPlugin {
     public void onEnable() {
 
         NMSLoader.load(this);
-        getLogger().info("Asteroid NMS Library loaded for MC " + priv.seventeen.artist.asteroid.AsteroidAPI.getMcVersion());
+        getLogger().info("Asteroid NMS Library loaded for MC " + AsteroidAPI.getMcVersion());
 
         AsteroidExample.packetListenerExample(this);
 

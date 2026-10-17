@@ -25,3 +25,18 @@ tasks.assemble {
 tasks.named<io.papermc.paperweight.tasks.RemapJar>("reobfJar") {
     outputJar.set(layout.buildDirectory.file("libs/${project.name}-${project.version}-reobf.jar"))
 }
+
+// Native prefix regression executes the actual Paper collection, not a copied algorithm.
+configurations.testImplementation { extendsFrom(configurations.compileOnly.get()) }
+dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.mockito:mockito-core:5.14.2")
+    testImplementation("org.ow2.asm:asm:9.9.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
+}
+tasks.test {
+    useJUnitPlatform()
+    maxParallelForks = 1
+    maxHeapSize = "512m"
+    jvmArgs("-XX:ActiveProcessorCount=2")
+}

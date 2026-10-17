@@ -33,6 +33,7 @@ import priv.seventeen.artist.asteroid.item.IItemStackNMS;
 import priv.seventeen.artist.asteroid.item.ItemTag;
 import priv.seventeen.artist.asteroid.item.ItemTagData;
 import priv.seventeen.artist.asteroid.packet.*;
+import priv.seventeen.artist.asteroid.util.PaperCompat;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -390,7 +391,7 @@ public class AsteroidFullTest {
             String legacy = "{id:\"minecraft:diamond_sword\",count:1,"
                     + "components:{\"minecraft:attribute_modifiers\":{modifiers:[],show_in_tooltip:0b}}}";
             ItemStack item = AsteroidAPI.getItemStackNMS().json2Item(legacy);
-            if (item == null || item.getType() == org.bukkit.Material.AIR) {
+            if (item == null || item.getType() == Material.AIR) {
                 throw new RuntimeException("legacy item json 解析结果为 null/AIR");
             }
             ok("json2Item legacy component data (attribute_modifiers show_in_tooltip)");
@@ -435,11 +436,11 @@ public class AsteroidFullTest {
 
     private void testFoliaScheduler() {
         try {
-            priv.seventeen.artist.asteroid.util.PaperCompat.isPaper();
-            priv.seventeen.artist.asteroid.util.PaperCompat.isFolia();
-            priv.seventeen.artist.asteroid.util.PaperCompat.isSpigot();
-            ok("PaperCompat detection (paper=" + priv.seventeen.artist.asteroid.util.PaperCompat.isPaper()
-                    + ", folia=" + priv.seventeen.artist.asteroid.util.PaperCompat.isFolia() + ")");
+            PaperCompat.isPaper();
+            PaperCompat.isFolia();
+            PaperCompat.isSpigot();
+            ok("PaperCompat detection (paper=" + PaperCompat.isPaper()
+                    + ", folia=" + PaperCompat.isFolia() + ")");
         } catch (Throwable e) {
             fail("PaperCompat", e);
         }

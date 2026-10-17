@@ -16,12 +16,20 @@
 package priv.seventeen.artist.asteroid.nms.v1_21_5;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.serialization.Dynamic;
+import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
+import net.minecraft.util.datafix.DataFixers;
+import net.minecraft.util.datafix.fixes.References;
 import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 import priv.seventeen.artist.asteroid.item.IItemStackNMS;
+
+import java.util.Optional;
 
 public class ItemStackNMSImpl implements IItemStackNMS {
 
@@ -39,7 +47,7 @@ public class ItemStackNMSImpl implements IItemStackNMS {
         try {
             CompoundTag tag = TagParser.parseCompoundFully(json);
             var registry = CraftRegistry.getMinecraftRegistry();
-            java.util.Optional<net.minecraft.world.item.ItemStack> parsed =
+            Optional<net.minecraft.world.item.ItemStack> parsed =
                     net.minecraft.world.item.ItemStack.parse(registry, tag);
             if (parsed.isEmpty()) {
                 // 直接解码失败：多为旧版本(如 1.21.5 之前 attribute_modifiers 等组件仍带 show_in_tooltip)
@@ -53,11 +61,11 @@ public class ItemStackNMSImpl implements IItemStackNMS {
     }
 
     private static CompoundTag upgradeItemTag(CompoundTag tag) {
-        int current = net.minecraft.SharedConstants.getCurrentVersion().getDataVersion().getVersion();
-        com.mojang.serialization.Dynamic<net.minecraft.nbt.Tag> input =
-                new com.mojang.serialization.Dynamic<>(net.minecraft.nbt.NbtOps.INSTANCE, tag);
-        com.mojang.serialization.Dynamic<net.minecraft.nbt.Tag> out = net.minecraft.util.datafix.DataFixers.getDataFixer()
-                .update(net.minecraft.util.datafix.fixes.References.ITEM_STACK, input, MIN_COMPONENT_DATA_VERSION, current);
+        int current = SharedConstants.getCurrentVersion().getDataVersion().getVersion();
+        Dynamic<Tag> input =
+                new Dynamic<>(NbtOps.INSTANCE, tag);
+        Dynamic<Tag> out = DataFixers.getDataFixer()
+                .update(References.ITEM_STACK, input, MIN_COMPONENT_DATA_VERSION, current);
         return (CompoundTag) out.getValue();
     }
 }

@@ -15,6 +15,7 @@
  */
 package priv.seventeen.artist.asteroid.nms.v1_21_1;
 
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import org.bukkit.craftbukkit.entity.CraftEntity;
@@ -43,13 +44,13 @@ public class MobAIImpl implements IMobAI {
     @Override
     public void addGoal(Mob mob, int priority, Object nmsGoal) {
         net.minecraft.world.entity.Mob nmsMob = getNMSMob(mob);
-        nmsMob.goalSelector.addGoal(priority, (net.minecraft.world.entity.ai.goal.Goal) nmsGoal);
+        nmsMob.goalSelector.addGoal(priority, (Goal) nmsGoal);
     }
 
     @Override
     public void addTargetGoal(Mob mob, int priority, Object nmsGoal) {
         net.minecraft.world.entity.Mob nmsMob = getNMSMob(mob);
-        nmsMob.targetSelector.addGoal(priority, (net.minecraft.world.entity.ai.goal.Goal) nmsGoal);
+        nmsMob.targetSelector.addGoal(priority, (Goal) nmsGoal);
     }
 
     @Override

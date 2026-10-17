@@ -19,6 +19,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
@@ -98,8 +99,8 @@ public final class FoliaScheduler {
             }
         } else {
 
-            if (taskHandle instanceof org.bukkit.scheduler.BukkitTask) {
-                ((org.bukkit.scheduler.BukkitTask) taskHandle).cancel();
+            if (taskHandle instanceof BukkitTask) {
+                ((BukkitTask) taskHandle).cancel();
             }
         }
     }

@@ -15,7 +15,9 @@
  */
 package priv.seventeen.artist.asteroid.nms.v26_1_2;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.*;
+import net.minecraft.nbt.EndTag;
 import net.minecraft.world.item.component.CustomData;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
@@ -32,7 +34,7 @@ public class ItemTagBridgeImpl implements ItemTag.Bridge {
     @Override
     public ItemTag read(ItemStack item) {
         net.minecraft.world.item.ItemStack nms = CraftItemStack.asNMSCopy(item);
-        CustomData customData = nms.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        CustomData customData = nms.get(DataComponents.CUSTOM_DATA);
         if (customData == null) {
             return new ItemTag();
         }
@@ -44,7 +46,7 @@ public class ItemTagBridgeImpl implements ItemTag.Bridge {
     public ItemStack write(ItemStack item, ItemTag tag) {
         net.minecraft.world.item.ItemStack nms = CraftItemStack.asNMSCopy(item);
         CompoundTag compound = itemTagToCompound(tag);
-        nms.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, CustomData.of(compound));
+        nms.set(DataComponents.CUSTOM_DATA, CustomData.of(compound));
         return CraftItemStack.asBukkitCopy(nms);
     }
 
@@ -112,7 +114,7 @@ public class ItemTagBridgeImpl implements ItemTag.Bridge {
                 }
                 yield listTag;
             }
-            case END -> net.minecraft.nbt.EndTag.INSTANCE;
+            case END -> EndTag.INSTANCE;
         };
     }
 }

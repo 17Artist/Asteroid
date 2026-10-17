@@ -19,6 +19,7 @@ import org.bukkit.Particle;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import priv.seventeen.artist.asteroid.AsteroidAPI;
 import priv.seventeen.artist.asteroid.entity.CustomEntity;
 import priv.seventeen.artist.asteroid.entity.ability.*;
@@ -105,7 +106,7 @@ public class AsteroidExample {
         FakeOp.execute(player, "give @s diamond 64", 2);
     }
 
-    public static void packetListenerExample(org.bukkit.plugin.Plugin plugin) {
+    public static void packetListenerExample(Plugin plugin) {
         AsteroidAPI.addPacketListener(plugin, new PacketListener() {
             @Override
             public void onReceive(PacketEvent event) {
@@ -158,7 +159,7 @@ public class AsteroidExample {
         Object nmsEntity = AsteroidAPI.getMobAI().getNMSEntity(mob);
     }
 
-    public static void foliaExample(org.bukkit.plugin.Plugin plugin, Player player) {
+    public static void foliaExample(Plugin plugin, Player player) {
 
         FoliaScheduler.runTask(plugin, () -> {
 

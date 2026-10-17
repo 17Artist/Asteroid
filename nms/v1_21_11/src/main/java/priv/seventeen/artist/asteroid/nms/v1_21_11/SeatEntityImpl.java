@@ -42,6 +42,8 @@ public class SeatEntityImpl extends ArmorStand {
         this.setSilent(true);
         this.setMarker(true);
         this.persist = false;
+//        org.bukkit.block.Skull skull;
+//        skull.setOwner()
     }
 
     @Override

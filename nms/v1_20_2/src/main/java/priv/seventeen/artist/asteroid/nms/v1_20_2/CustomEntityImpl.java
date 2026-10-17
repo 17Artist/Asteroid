@@ -21,6 +21,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -44,6 +45,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class CustomEntityImpl extends LivingEntity implements CustomEntity {
 
@@ -62,7 +64,7 @@ public class CustomEntityImpl extends LivingEntity implements CustomEntity {
     }
 
     private final Map<Class<? extends Ability>, Ability> abilities = new ConcurrentHashMap<>();
-    private final List<TickableAbility> tickableAbilities = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<TickableAbility> tickableAbilities = new CopyOnWriteArrayList<>();
     private final List<SeatEntityImpl> seats = new ArrayList<>();
 
     private @Nullable org.bukkit.entity.Entity owner;
@@ -238,7 +240,7 @@ public class CustomEntityImpl extends LivingEntity implements CustomEntity {
     @Override
     public void nmsAddPassenger(@Nullable org.bukkit.entity.Entity passenger) {
         if (passenger == null) return;
-        net.minecraft.world.entity.Entity nmsPassenger = ((CraftEntity) passenger).getHandle();
+        Entity nmsPassenger = ((CraftEntity) passenger).getHandle();
 
         for (SeatEntityImpl seat : seats) {
             if (seat.getPassengers().isEmpty()) {
@@ -306,7 +308,7 @@ public class CustomEntityImpl extends LivingEntity implements CustomEntity {
                 }
             } else if (followAbility != null && followAbility.isEnabled()) {
 
-                org.bukkit.Location ownerLoc = owner.getLocation();
+                Location ownerLoc = owner.getLocation();
                 double yawRad = Math.toRadians(ownerLoc.getYaw());
                 double sin = Math.sin(yawRad);
                 double cos = Math.cos(yawRad);

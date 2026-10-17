@@ -17,11 +17,15 @@ package priv.seventeen.artist.asteroid.nms.v1_21_8;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.Dynamic;
+import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.RegistryOps;
+import net.minecraft.util.datafix.DataFixers;
+import net.minecraft.util.datafix.fixes.References;
 import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
@@ -59,11 +63,11 @@ public class ItemStackNMSImpl implements IItemStackNMS {
     }
 
     private static CompoundTag upgradeItemTag(CompoundTag tag) {
-        int current = net.minecraft.SharedConstants.getCurrentVersion().dataVersion().version();
-        com.mojang.serialization.Dynamic<Tag> input =
-                new com.mojang.serialization.Dynamic<>(NbtOps.INSTANCE, tag);
-        com.mojang.serialization.Dynamic<Tag> out = net.minecraft.util.datafix.DataFixers.getDataFixer()
-                .update(net.minecraft.util.datafix.fixes.References.ITEM_STACK, input, MIN_COMPONENT_DATA_VERSION, current);
+        int current = SharedConstants.getCurrentVersion().dataVersion().version();
+        Dynamic<Tag> input =
+                new Dynamic<>(NbtOps.INSTANCE, tag);
+        Dynamic<Tag> out = DataFixers.getDataFixer()
+                .update(References.ITEM_STACK, input, MIN_COMPONENT_DATA_VERSION, current);
         return (CompoundTag) out.getValue();
     }
 }

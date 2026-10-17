@@ -18,6 +18,7 @@ package priv.seventeen.artist.asteroid.nms.v1_20_6;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import org.bukkit.craftbukkit.entity.CraftLivingEntity;
@@ -35,7 +36,7 @@ public class AttributeBridgeImpl implements AttributeBridge {
 
     private AttributeInstance getInstance(LivingEntity entity, String attribute) {
         net.minecraft.world.entity.LivingEntity nmsEntity = ((CraftLivingEntity) entity).getHandle();
-        Holder.Reference<net.minecraft.world.entity.ai.attributes.Attribute> holder =
+        Holder.Reference<Attribute> holder =
                 BuiltInRegistries.ATTRIBUTE.getHolder(new ResourceLocation(attribute)).orElse(null);
         if (holder == null) return null;
         return nmsEntity.getAttribute(holder);
@@ -61,8 +62,8 @@ public class AttributeBridgeImpl implements AttributeBridge {
     @Override
     public void removeAllModifiers(LivingEntity entity, String prefix) {
         net.minecraft.world.entity.LivingEntity nmsEntity = ((CraftLivingEntity) entity).getHandle();
-        for (net.minecraft.world.entity.ai.attributes.Attribute nmsAttr : BuiltInRegistries.ATTRIBUTE) {
-            Holder.Reference<net.minecraft.world.entity.ai.attributes.Attribute> holder =
+        for (Attribute nmsAttr : BuiltInRegistries.ATTRIBUTE) {
+            Holder.Reference<Attribute> holder =
                     BuiltInRegistries.ATTRIBUTE.getHolder(BuiltInRegistries.ATTRIBUTE.getKey(nmsAttr)).orElse(null);
             if (holder == null) continue;
             AttributeInstance instance = nmsEntity.getAttribute(holder);

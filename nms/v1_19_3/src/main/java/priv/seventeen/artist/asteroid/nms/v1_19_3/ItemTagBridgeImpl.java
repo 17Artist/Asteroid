@@ -16,6 +16,7 @@
 package priv.seventeen.artist.asteroid.nms.v1_19_3;
 
 import net.minecraft.nbt.*;
+import net.minecraft.nbt.EndTag;
 import org.bukkit.craftbukkit.v1_19_R2.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 import priv.seventeen.artist.asteroid.item.ItemTag;
@@ -110,7 +111,7 @@ public class ItemTagBridgeImpl implements ItemTag.Bridge {
                 }
                 yield listTag;
             }
-            case END -> net.minecraft.nbt.EndTag.INSTANCE;
+            case END -> EndTag.INSTANCE;
         };
     }
 }

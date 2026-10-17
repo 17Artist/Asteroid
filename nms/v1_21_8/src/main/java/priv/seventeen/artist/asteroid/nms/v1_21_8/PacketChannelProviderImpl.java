@@ -16,16 +16,24 @@
 package priv.seventeen.artist.asteroid.nms.v1_21_8;
 
 import io.netty.channel.Channel;
+import net.minecraft.network.Connection;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import priv.seventeen.artist.asteroid.internal.PacketHandlerImpl;
+import priv.seventeen.artist.asteroid.internal.PacketChannelAccess;
 
 public class PacketChannelProviderImpl implements PacketHandlerImpl.ChannelProvider {
+
+    private static final class Access {
+        static final PacketChannelAccess<ServerGamePacketListenerImpl,Connection> CHANNEL =
+                new PacketChannelAccess<>(ServerGamePacketListenerImpl.class,Connection.class);
+    }
 
     @Override
     public Channel getChannel(Player player) {
         if (player instanceof CraftPlayer cp) {
-            return cp.getHandle().connection.connection.channel;
+            return Access.CHANNEL.channel(cp.getHandle().connection);
         }
         return null;
     }

@@ -17,6 +17,7 @@ package priv.seventeen.artist.asteroid.nms.v1_19_4;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftLivingEntity;
@@ -34,7 +35,7 @@ public class AttributeBridgeImpl implements AttributeBridge {
 
     private AttributeInstance getInstance(LivingEntity entity, String attribute) {
         net.minecraft.world.entity.LivingEntity nmsEntity = ((CraftLivingEntity) entity).getHandle();
-        net.minecraft.world.entity.ai.attributes.Attribute nmsAttr =
+        Attribute nmsAttr =
                 BuiltInRegistries.ATTRIBUTE.get(new ResourceLocation(attribute));
         if (nmsAttr == null) return null;
         return nmsEntity.getAttribute(nmsAttr);
@@ -60,7 +61,7 @@ public class AttributeBridgeImpl implements AttributeBridge {
     @Override
     public void removeAllModifiers(LivingEntity entity, String prefix) {
         net.minecraft.world.entity.LivingEntity nmsEntity = ((CraftLivingEntity) entity).getHandle();
-        for (net.minecraft.world.entity.ai.attributes.Attribute nmsAttr : BuiltInRegistries.ATTRIBUTE) {
+        for (Attribute nmsAttr : BuiltInRegistries.ATTRIBUTE) {
             AttributeInstance instance = nmsEntity.getAttribute(nmsAttr);
             if (instance == null) continue;
             List<AttributeModifier> toRemove = new ArrayList<>();
@@ -95,7 +96,7 @@ public class AttributeBridgeImpl implements AttributeBridge {
     @Override
     public List<String> getAvailableAttributes() {
         List<String> result = new ArrayList<>();
-        for (net.minecraft.world.entity.ai.attributes.Attribute attr : BuiltInRegistries.ATTRIBUTE) {
+        for (Attribute attr : BuiltInRegistries.ATTRIBUTE) {
             ResourceLocation key = BuiltInRegistries.ATTRIBUTE.getKey(attr);
             if (key != null) {
                 result.add(key.toString());

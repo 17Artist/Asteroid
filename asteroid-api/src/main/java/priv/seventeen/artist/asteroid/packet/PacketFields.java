@@ -18,6 +18,7 @@ package priv.seventeen.artist.asteroid.packet;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -250,7 +251,7 @@ public final class PacketFields {
                     long offset = (long) unsafeClass.getMethod("objectFieldOffset", Field.class)
                             .invoke(unsafe, field);
 
-                    java.lang.reflect.Method putMethod;
+                    Method putMethod;
                     try {
                         putMethod = unsafeClass.getMethod("putReference", Object.class, long.class, Object.class);
                     } catch (NoSuchMethodException nsm) {

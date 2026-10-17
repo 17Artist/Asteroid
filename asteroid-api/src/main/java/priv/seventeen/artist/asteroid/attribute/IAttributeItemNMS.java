@@ -17,6 +17,7 @@ package priv.seventeen.artist.asteroid.attribute;
 
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public interface IAttributeItemNMS {
 
@@ -31,7 +32,7 @@ public interface IAttributeItemNMS {
      * @param slot      装备槽位（如 "hand", "head", "chest", "legs", "feet", "offhand"，null 表示所有槽位）
      */
     void addModifier(@NotNull ItemMeta meta, @NotNull String attribute, @NotNull String name,
-                     double amount, int operation, @org.jetbrains.annotations.Nullable String slot);
+                     double amount, int operation, @Nullable String slot);
 
     /**
      * 从 ItemMeta 移除指定属性的修饰符
