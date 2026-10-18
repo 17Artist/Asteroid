@@ -19,6 +19,8 @@ tasks.test {
 
 java { withSourcesJar() }
 
+val repoPassword = System.getenv("repo") ?: ""
+
 // Core is also consumed directly when reviewing/compiling version-local implementations.
 // Declaring maven-publish on the root alone does not create a publication for this module.
 publishing {
@@ -26,6 +28,16 @@ publishing {
         create<MavenPublication>("maven") {
             from(components["java"])
             artifactId = "asteroid-core"
+        }
+    }
+    repositories {
+        maven {
+            url = uri(property("mavenRepoUrl") as String)
+            isAllowInsecureProtocol = true
+            credentials {
+                username = property("mavenRepoUser") as String
+                password = repoPassword
+            }
         }
     }
 }

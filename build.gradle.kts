@@ -42,6 +42,6 @@ listOf("asteroid-api", "asteroid-core", "asteroid-nms").forEach { name ->
 
 tasks.register("deploy") {
     group = "asteroid"
-    description = "Publish asteroid-api and asteroid-nms to Maven repository"
-    dependsOn(":asteroid-api:publish", ":asteroid-nms:publish")
+    description = "Publish asteroid-api, asteroid-core and asteroid-nms to Maven repository"
+    dependsOn(":asteroid-api:publish", ":asteroid-core:publish", ":asteroid-nms:publish")
 }
