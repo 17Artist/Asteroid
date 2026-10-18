@@ -9,8 +9,9 @@ import java.util.function.Predicate;
 
 /**
  * Optional server-native navigation ownership. Consumers must not substitute Paper's unowned
- * findPath/stop calls when this capability is absent. Initial provider: Paper 1.21.1, exact native
+ * findPath/stop calls when this capability is absent. Version-local Paper providers admit exact native
  * Zombie/Husk and explicitly prepared exact Skeleton with Ground navigation and ordinary MoveControl.
+ * Ground/facing support does not imply the optional retained Husk flight-handoff contract below.
  * Skeleton requires native daylight burning and loot pickup disabled, no powder-snow exposure or
  * freeze conversion. These conditions and goal ownership are rechecked throughout the lease.
  * No Folia, modern Brain-type
@@ -18,6 +19,16 @@ import java.util.function.Predicate;
  * goals; AI remains enabled and aware. Leashed, mounted, dirty or externally driven hosts reject.
  */
 public interface NativeNavigationNMS {
+    /**
+     * Explicit provider opt-in for an exact native Husk ground -> retained drive-program -> ground
+     * handoff. Default false preserves old providers: ordinary navigation, supportsDrivePrograms or
+     * supportsMotionCleanup alone must never imply this stronger combination. A true answer is not
+     * host admission, a flight route or proof of released ownership. Callers must still hold the exact
+     * live ground receipt, prove exclusive goals/entity/world/model/owner, retain before native writes,
+     * close the old controller successfully before the next claim, and bound/verify real contact and
+     * native program operations. Unsupported platforms reject; no Paper-pathfinder fallback.
+     */
+    default boolean supportsRetainedHuskFlight(){return false;}
     NavigationLease controlNavigation(Plugin owner, Mob host);
     /** Exact receipt is published before native writes. Same retained-admission rules as driving. */
     default NavigationLease controlNavigationRetained(Plugin owner,Mob host,
@@ -26,7 +37,7 @@ public interface NativeNavigationNMS {
     }
 
     /**
-     * Explicit cold setup for the exact Paper 1.21.1 Skeleton provider, not lease acquisition.
+     * Explicit cold setup for a version-local exact Paper Skeleton provider, not lease acquisition.
      * The caller must prove no Brain owns this entity; the provider proves no native navigation or
      * movement owner, ordinary idle controllers, cleared MOVE/TARGET goals and a stable same-tick host.
      * Preflight rejection writes nothing. Only daylight burning and loot pickup are set false.
@@ -53,7 +64,7 @@ public interface NativeNavigationNMS {
     }
     /**
      * One fixed native angle on an existing exact navigation owner, not target tracking.
-     * Only the pinned Paper 1.21.1 provider currently implements this optional capability.
+     * Version-local providers may implement this optional capability; unsupported providers reject.
      * The 6..200 ticks are a maximum lifetime [admissionTick, admissionTick+ticks).
      * current=false is revocation, not proof that physical restoration succeeded. Retain the
      * exact receipt before any native writes; retry close on that same object after failures.

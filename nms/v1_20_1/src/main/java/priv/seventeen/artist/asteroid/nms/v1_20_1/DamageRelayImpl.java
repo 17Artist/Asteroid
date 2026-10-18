@@ -10,18 +10,19 @@ import org.bukkit.craftbukkit.v1_20_R1.entity.CraftEntity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.util.BoundingBox;
 import priv.seventeen.artist.asteroid.entity.NativeDamageRelay;
+import priv.seventeen.artist.asteroid.entity.NativeReceiptOwnership;
 
 import java.util.*;
 import java.util.function.Consumer;
 
 /** Real server entity for explicit child-hitbox semantics, never a per-bone network entity. */
-final class DamageRelayImpl extends CustomEntityImpl implements NativeDamageRelay {
-    private final LivingEntity parent;
+final class DamageRelayImpl extends CustomEntityImpl implements NativeDamageRelay, NativeReceiptOwnership {
+    private final org.bukkit.entity.Entity parent;
     private final Handler handler;
     private final Consumer<Throwable> failure;
     private BoundingBox bounds;
     private boolean registered,closed,dispatching;
-    DamageRelayImpl(ServerLevel level,LivingEntity parent,BoundingBox bounds,Handler handler,Consumer<Throwable> failure){
+    DamageRelayImpl(ServerLevel level,org.bukkit.entity.Entity parent,BoundingBox bounds,Handler handler,Consumer<Throwable> failure){
         super(level,parent);this.parent=Objects.requireNonNull(parent);this.handler=Objects.requireNonNull(handler);this.failure=Objects.requireNonNull(failure);
         getBukkitEntity().setPersistent(false);setInvulnerable(false);update(bounds);
     }
@@ -43,6 +44,12 @@ final class DamageRelayImpl extends CustomEntityImpl implements NativeDamageRela
     @Override public boolean canCollideWith(Entity other){return false;}
     @Override public LivingEntity entity(){return getBukkitEntity();}
     @Override public boolean valid(){return registered&&!closed&&!isRemoved()&&parent.isValid()&&!parent.isDead()&&parent.getWorld()==getBukkitEntity().getWorld();}
+    @Override public boolean retainedOwner(org.bukkit.entity.Entity expectedOwner){
+        check();
+        return expectedOwner==parent&&registered&&!closed&&!isRemoved()
+            &&PrecisionProxyImpl.proxyOwner(getId())==parent&&getBukkitEntity().isValid()
+            &&parent.getWorld()==getBukkitEntity().getWorld();
+    }
     private void detach(){closed=true;registered=false;PrecisionProxyImpl.removeReplayAlias(getId());}
     @Override public void close(){check();detach();if(!isRemoved())remove();}
     @Override public void remove(){detach();super.remove();}

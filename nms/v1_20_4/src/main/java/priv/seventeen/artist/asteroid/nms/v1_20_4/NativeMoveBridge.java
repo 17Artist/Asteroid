@@ -34,9 +34,10 @@ final class NativeMoveBridge {
     }
     static void move(Entity entity,NativeMovementNMS.Input input){Objects.requireNonNull(input);Mob mob=mob(entity);if(mob!=null){uncontrolled(mob);apply(mob,input);}}
     static void uncontrolled(Entity entity){Mob host=mob(entity);if(host!=null)uncontrolled(host);}
-    private static void uncontrolled(Mob host){if(Access.get(host) instanceof Control control&&(control.queue!=null||control.root!=null||control.drive!=null))throw new IllegalStateException("Native movement already has an owner");}
+    private static void uncontrolled(Mob host){NativeNavigationBridge.requireUnowned(host);if(Access.get(host) instanceof Control control&&(control.queue!=null||control.root!=null||control.drive!=null))throw new IllegalStateException("Native movement already has an owner");}
     private static Control control(Entity entity){
         Mob host=mob(entity);if(host==null)throw new IllegalArgumentException("Post-tick movement requires a Mob");
+        NativeNavigationBridge.requireUnowned(host);
         var previous=Access.get(host);return previous instanceof Control active&&!active.closed?active:new Control(host,previous);
     }
     static NativeMovementNMS.MovementLease control(Entity entity,Consumer<Throwable> failure){
@@ -66,6 +67,7 @@ final class NativeMoveBridge {
     }
     private static DrivePort drivePort(Entity entity){
         Mob host=mob(entity);if(host==null||host.isNoAi())throw new IllegalArgumentException("Native driving requires an AI-enabled Mob");
+        NativeNavigationBridge.requireUnowned(host);
         var previous=Access.get(host);var previousLook=LookAccess.get(host);
         // Cold preparation never repairs a leftover wrapper before its exact receipt exists.
         if(previous instanceof Control)throw new IllegalStateException("Native movement controller has not been released");

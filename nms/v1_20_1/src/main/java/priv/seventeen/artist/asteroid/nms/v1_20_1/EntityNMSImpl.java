@@ -46,12 +46,14 @@ import org.bukkit.util.Vector;
 import priv.seventeen.artist.asteroid.entity.IEntityNMS;
 import priv.seventeen.artist.asteroid.entity.NativeDamageRelay;
 import priv.seventeen.artist.asteroid.entity.NativeDamageRelayNMS;
+import priv.seventeen.artist.asteroid.entity.NativeEntityHitboxNMS;
 import priv.seventeen.artist.asteroid.entity.NativeDimensionsNMS;
 import priv.seventeen.artist.asteroid.entity.NativeDriveProgram;
 import priv.seventeen.artist.asteroid.entity.NativeInteractionNMS;
 import priv.seventeen.artist.asteroid.entity.NativeMainInteractionNMS;
 import priv.seventeen.artist.asteroid.entity.NativeModelPivotNMS;
 import priv.seventeen.artist.asteroid.entity.NativeMovementNMS;
+import priv.seventeen.artist.asteroid.entity.NativeNavigationNMS;
 import priv.seventeen.artist.asteroid.entity.NativeOcclusionNMS;
 import priv.seventeen.artist.asteroid.entity.NativePoseNMS;
 import priv.seventeen.artist.asteroid.entity.NativePrecisionNMS;
@@ -70,20 +72,36 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class EntityNMSImpl extends AbstractNativeModelMountNMS implements IEntityNMS, NativePrecisionNMS, NativePoseNMS, NativeOcclusionNMS, NativeDimensionsNMS, NativeStepNMS, NativeMovementNMS, NativeDamageRelayNMS, NativeInteractionNMS, NativeMainInteractionNMS, NativeModelPivotNMS {
+public class EntityNMSImpl extends AbstractNativeModelMountNMS implements IEntityNMS, NativePrecisionNMS, NativeEntityHitboxNMS, NativePoseNMS, NativeOcclusionNMS, NativeDimensionsNMS, NativeStepNMS, NativeMovementNMS, NativeNavigationNMS, NativeDamageRelayNMS, NativeInteractionNMS, NativeMainInteractionNMS, NativeModelPivotNMS {
 
     @Override public NativeModelPivotNMS.PivotHost describePivotHost(Entity host) { return NativePivotBridge.describe(host); }
     @Override public NativeModelPivotNMS.PivotSample samplePivotHost(Entity host, boolean camera) { return NativePivotBridge.sample(host, camera); }
 
     public EntityNMSImpl() { super(new NativeMountPlatformImpl()); }
 
+    private static void entityHitboxOwner(Entity owner){
+        if(!Bukkit.isPrimaryThread()||owner==null||!owner.isValid()||owner.isDead())throw new IllegalStateException("Invalid entity hitbox owner/thread");
+        if(!(owner instanceof CraftEntity craft))throw new IllegalArgumentException("Entity hitbox needs a real native owner");
+        var handle=craft.getHandle();
+        if(handle instanceof PrecisionProxyImpl||handle instanceof DamageRelayImpl)
+            throw new IllegalArgumentException("A precision proxy or damage relay cannot own another native hitbox");
+    }
     @Override public NativeDamageRelay createDamageRelay(LivingEntity owner,BoundingBox bounds,NativeDamageRelay.Handler handler,Consumer<Throwable> failure){
-        if(!Bukkit.isPrimaryThread()||!owner.isValid()||owner.isDead())throw new IllegalStateException("Invalid damage relay owner/thread");
+        return createEntityDamageRelay(owner,bounds,handler,failure);
+    }
+    @Override public NativeDamageRelay createEntityDamageRelay(Entity owner,BoundingBox bounds,NativeDamageRelay.Handler handler,Consumer<Throwable> failure){
+        entityHitboxOwner(owner);
         ServerLevel world=((CraftWorld)owner.getWorld()).getHandle();
         DamageRelayImpl relay=new DamageRelayImpl(world,owner,bounds,handler,failure);
         try{if(!world.addFreshEntity(relay))throw new IllegalStateException("Damage relay spawn was rejected");relay.registered();return relay;}
         catch(RuntimeException|Error error){relay.close();throw error;}
     }
+
+    @Override public NativeNavigationNMS.NavigationLease controlNavigation(Plugin owner,org.bukkit.entity.Mob entity){return NativeNavigationBridge.open(owner,entity);}
+    @Override public NativeNavigationNMS.NavigationLease controlNavigationRetained(Plugin owner,org.bukkit.entity.Mob entity,Consumer<NativeNavigationNMS.NavigationLease> retain){return NativeNavigationBridge.openRetained(owner,entity,retain);}
+    @Override public void prepareSkeleton(Plugin owner,org.bukkit.entity.Mob entity){NativeNavigationBridge.prepareSkeleton(owner,entity);}
+
+    @Override public boolean supportsRetainedHuskFlight(){return NativeNavigationBridge.supportsRetainedHuskFlight();}
 
     @Override public void move(Entity entity,NativeMovementNMS.Input input){NativeMoveBridge.move(entity,input);}
     @Override public boolean supportsDriving(){return true;}
@@ -211,7 +229,14 @@ public class EntityNMSImpl extends AbstractNativeModelMountNMS implements IEntit
         return new EntityPoseBridge.Control((Mob)((CraftEntity)mob).getHandle(),controller,failure);
     }
 
-    @Override public PrecisionHitbox createPrecisionHitbox(LivingEntity owner, BoundingBox bounds, PrecisionHitbox.Trace trace) {
+    @Override public PrecisionHitbox createPrecisionHitbox(LivingEntity owner,BoundingBox bounds,PrecisionHitbox.Trace trace){
+        return openPrecisionHitbox(owner,bounds,trace);
+    }
+    @Override public PrecisionHitbox createEntityPrecisionHitbox(Entity owner,BoundingBox bounds,PrecisionHitbox.ContextTrace trace){
+        return openPrecisionHitbox(Objects.requireNonNull(owner),bounds,Objects.requireNonNull(trace));
+    }
+    private PrecisionHitbox openPrecisionHitbox(Entity owner,BoundingBox bounds,PrecisionHitbox.Trace trace) {
+        if(trace instanceof PrecisionHitbox.ContextTrace)entityHitboxOwner(owner);
         if (!Bukkit.isPrimaryThread()) throw new IllegalStateException("Precision hitboxes require the entity thread");
         ServerLevel world = ((CraftWorld) owner.getWorld()).getHandle();
         PrecisionProxyImpl proxy = new PrecisionProxyImpl(world, owner, bounds, trace);
@@ -219,7 +244,8 @@ public class EntityNMSImpl extends AbstractNativeModelMountNMS implements IEntit
         proxy.registered();
         return proxy;
     }
-    @Override public void attack(Player player, LivingEntity target) {
+    @Override public void attack(Player player, LivingEntity target) { attackEntity(player,target); }
+    @Override public void attackEntity(Player player, Entity target) {
         if (!Bukkit.isPrimaryThread() || player.getWorld() != target.getWorld()) throw new IllegalStateException("Invalid attack context");
         ((CraftPlayer) player).getHandle().attack(((CraftEntity) target).getHandle());
     }
@@ -291,15 +317,18 @@ public class EntityNMSImpl extends AbstractNativeModelMountNMS implements IEntit
         PrecisionPiercing.prepare(handle);
         return projectile.getWorld() == target.getWorld() && PrecisionPiercing.canHit(projectile,target);
     }
-    @Override public void hit(org.bukkit.entity.Projectile projectile, LivingEntity target, Vector point) {
+    @Override public void hit(org.bukkit.entity.Projectile projectile, LivingEntity target, Vector point) { hitEntity(projectile,target,point); }
+    @Override public void hitEntity(org.bukkit.entity.Projectile projectile, Entity target, Vector point) {
         point.checkFinite();
         if (!Bukkit.isPrimaryThread() || projectile.getWorld() != target.getWorld()) throw new IllegalStateException("Invalid impact context");
         var handle = (Projectile) ((CraftEntity) projectile).getHandle();
+        var nativeTarget = ((CraftEntity) target).getHandle();
+        int targetId = target.getEntityId();
         PrecisionPiercing.prepare(handle);
         boolean previousCancelled=PrecisionPiercing.beginReplay(handle);
         try{
-        handle.preOnHit(new EntityHitResult(((CraftEntity) target).getHandle(), new Vec3(point.getX(),point.getY(),point.getZ())));
-        }finally{PrecisionPiercing.endReplay(handle,previousCancelled,target.getEntityId());}
+        handle.preOnHit(new EntityHitResult(nativeTarget, new Vec3(point.getX(),point.getY(),point.getZ())));
+        }finally{PrecisionPiercing.endReplay(handle,previousCancelled,targetId);}
     }
 
     private static final VarHandle SIZE_HANDLE;

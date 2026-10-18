@@ -44,6 +44,7 @@ import java.util.stream.Stream;
 /** Exact Paper 1.21.1 Zombie/Husk/prepared Skeleton Ground navigation; no timer, fake event or velocity. */
 final class NativeNavigationBridge {
     private NativeNavigationBridge() {}
+    static boolean supportsRetainedHuskFlight(){return PaperCompat.isPaper()&&!PaperCompat.isFolia();}
     private static final StackWalker STACK=StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     private static int queriesOnStack;
     static NativeNavigationNMS.NavigationLease open(Plugin owner,org.bukkit.entity.Mob entity) {

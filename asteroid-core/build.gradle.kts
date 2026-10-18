@@ -16,3 +16,16 @@ tasks.test {
     maxHeapSize = "192m"
     jvmArgs("-XX:ActiveProcessorCount=1")
 }
+
+java { withSourcesJar() }
+
+// Core is also consumed directly when reviewing/compiling version-local implementations.
+// Declaring maven-publish on the root alone does not create a publication for this module.
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            artifactId = "asteroid-core"
+        }
+    }
+}

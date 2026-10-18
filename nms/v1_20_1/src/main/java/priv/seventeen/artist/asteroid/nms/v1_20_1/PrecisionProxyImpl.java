@@ -6,9 +6,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftEntity;
 import org.bukkit.util.BoundingBox;
+import priv.seventeen.artist.asteroid.entity.NativePrecisionQuery;
 import priv.seventeen.artist.asteroid.entity.PrecisionHitbox;
+import priv.seventeen.artist.asteroid.entity.NativeReceiptOwnership;
+import priv.seventeen.artist.asteroid.internal.entity.NativePrecisionParameters;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -20,13 +23,13 @@ import java.util.Objects;
 import java.util.Optional;
 
 /** Never tracked by clients. One broad-phase entry per owner, not one network entity per bone. */
-final class PrecisionProxyImpl extends CustomEntityImpl implements PrecisionHitbox {
+final class PrecisionProxyImpl extends CustomEntityImpl implements PrecisionHitbox, NativeReceiptOwnership {
     private static final VarHandle BOUNDS = boundsField();
-    private static final Map<Integer,LivingEntity> OWNERS = new HashMap<>();
+    private static final Map<Integer,org.bukkit.entity.Entity> OWNERS = new HashMap<>();
     private static final Map<Integer,Integer> OWNER_REFS = new HashMap<>();
     // Damage relays are replay destinations, not extra query proxies. Never suppress the owner's
     // vanilla box solely because a relay exists while precision projectiles are disabled.
-    private static final Map<Integer,LivingEntity> REPLAY_OWNERS = new HashMap<>();
+    private static final Map<Integer,org.bukkit.entity.Entity> REPLAY_OWNERS = new HashMap<>();
     private static final Map<Integer,Integer> EXCLUDED_BODIES = new HashMap<>();
     static boolean excluded(int id){return EXCLUDED_BODIES.containsKey(id);}
     static AutoCloseable exclude(org.bukkit.entity.Entity entity){
@@ -41,21 +44,23 @@ final class PrecisionProxyImpl extends CustomEntityImpl implements PrecisionHitb
     }
     private BoundingBox bounds;
     private Trace trace;
-    private final LivingEntity target;
+    private final org.bukkit.entity.Entity target;
+    private final Entity nativeOwner;
 
-    PrecisionProxyImpl(ServerLevel level, LivingEntity owner, BoundingBox bounds, Trace trace) {
+    PrecisionProxyImpl(ServerLevel level, org.bukkit.entity.Entity owner, BoundingBox bounds, Trace trace) {
         super(level, owner);
         this.target = Objects.requireNonNull(owner);
+        this.nativeOwner = ((CraftEntity) owner).getHandle();
         getBukkitEntity().setPersistent(false);
         update(bounds, trace);
     }
-    static LivingEntity proxyOwner(int id) { LivingEntity owner=OWNERS.get(id);return owner==null?REPLAY_OWNERS.get(id):owner; }
-    static void registerReplayAlias(int id,LivingEntity owner){if(REPLAY_OWNERS.putIfAbsent(id,owner)!=null)throw new IllegalStateException("Duplicate damage relay ID");}
+    static org.bukkit.entity.Entity proxyOwner(int id) { org.bukkit.entity.Entity owner=OWNERS.get(id);return owner==null?REPLAY_OWNERS.get(id):owner; }
+    static void registerReplayAlias(int id,org.bukkit.entity.Entity owner){if(REPLAY_OWNERS.putIfAbsent(id,owner)!=null)throw new IllegalStateException("Duplicate damage relay ID");}
     static void removeReplayAlias(int id){REPLAY_OWNERS.remove(id);}
     static boolean isOwner(int id) { return OWNER_REFS.containsKey(id); }
-    static int canonicalId(int id) { LivingEntity owner=proxyOwner(id);return owner==null?id:owner.getEntityId(); }
+    static int canonicalId(int id) { org.bukkit.entity.Entity owner=proxyOwner(id);return owner==null?id:owner.getEntityId(); }
     void registered() { if(OWNERS.putIfAbsent(getId(),target)==null) OWNER_REFS.merge(target.getEntityId(),1,Integer::sum); }
-    private void unregistered() { LivingEntity owner=OWNERS.remove(getId());if(owner!=null)OWNER_REFS.computeIfPresent(owner.getEntityId(),(id,count)->count<=1?null:count-1); }
+    private void unregistered() { org.bukkit.entity.Entity owner=OWNERS.remove(getId());if(owner!=null)OWNER_REFS.computeIfPresent(owner.getEntityId(),(id,count)->count<=1?null:count-1); }
     private static VarHandle boundsField() {
         try {
             Field found = null;
@@ -68,7 +73,7 @@ final class PrecisionProxyImpl extends CustomEntityImpl implements PrecisionHitb
         } catch (ReflectiveOperationException e) { throw new ExceptionInInitializerError(e); }
     }
     private void install() {
-        if (bounds != null) BOUNDS.set(this, new PreciseBounds(bounds, trace));
+        if (bounds != null) BOUNDS.set(this, new PreciseBounds(bounds, trace, nativeOwner));
     }
     @Override public void update(BoundingBox bounds, Trace trace) {
         if (!Bukkit.isPrimaryThread()) throw new IllegalStateException("Precision hitbox requires the entity thread");
@@ -87,31 +92,69 @@ final class PrecisionProxyImpl extends CustomEntityImpl implements PrecisionHitb
         // Deliberately no LivingEntity AI, effects, movement or equipment ticking for a server-only query entry.
     }
     @Override public boolean broadcastToPlayer(ServerPlayer player) { return false; }
+    @Override public float getPickRadius(){return queryPickRadius(trace,nativeOwner,super.getPickRadius());}
+    static float queryPickRadius(Trace trace,Entity nativeOwner,float legacyRadius){
+        return trace instanceof ContextTrace?nativeOwner.getPickRadius():legacyRadius;
+    }
     @Override public boolean isPickable() { return !isRemoved(); }
     @Override public boolean canBeHitByProjectile() { return !isRemoved(); }
     @Override public boolean canCollideWith(Entity other) { return false; }
     @Override public org.bukkit.entity.Entity entity() { return getBukkitEntity(); }
     @Override public boolean valid() { return !isRemoved() && target.isValid(); }
+    @Override public boolean retainedOwner(org.bukkit.entity.Entity expectedOwner) {
+        if (!Bukkit.isPrimaryThread()) throw new IllegalStateException("Precision ownership requires the entity thread");
+        return expectedOwner == target && OWNERS.get(getId()) == target && !isRemoved()
+            && getBukkitEntity().isValid() && target.getWorld() == getBukkitEntity().getWorld();
+    }
     @Override public void close() { unregistered(); if (!isRemoved()) remove(); }
     @Override public void remove() { unregistered(); super.remove(); }
     @Override public void remove(Entity.RemovalReason reason) { unregistered(); super.remove(reason); }
 
     static final class PreciseBounds extends AABB {
         private final Trace trace;
-        PreciseBounds(BoundingBox b, Trace trace) { this(b.getMinX(),b.getMinY(),b.getMinZ(),b.getMaxX(),b.getMaxY(),b.getMaxZ(),trace); }
-        private PreciseBounds(double ax,double ay,double az,double bx,double by,double bz,Trace trace) {
-            super(ax,ay,az,bx,by,bz); this.trace = trace;
+        private final Entity nativeOwner;
+        private final double inflateX,inflateY,inflateZ;
+        PreciseBounds(BoundingBox b,Trace trace,Entity nativeOwner) {
+            this(b.getMinX(),b.getMinY(),b.getMinZ(),b.getMaxX(),b.getMaxY(),b.getMaxZ(),trace,nativeOwner,0,0,0);
         }
+        private PreciseBounds(double ax,double ay,double az,double bx,double by,double bz,Trace trace,
+                              Entity nativeOwner,double inflateX,double inflateY,double inflateZ) {
+            super(ax,ay,az,bx,by,bz);this.trace=Objects.requireNonNull(trace);this.nativeOwner=Objects.requireNonNull(nativeOwner);
+            this.inflateX=inflateX;this.inflateY=inflateY;this.inflateZ=inflateZ;
+        }
+        @Override public AABB inflate(double value){return inflate(value,value,value);}
         @Override public AABB inflate(double x,double y,double z) {
-            // Vanilla broad-phase margin is not an inflation of authored combat geometry.
-            return new PreciseBounds(minX-x,minY-y,minZ-z,maxX+x,maxY+y,maxZ+z,trace);
+            // Keep the exact native operation sequence; authored Trace still receives no margin.
+            return new PreciseBounds(minX-x,minY-y,minZ-z,maxX+x,maxY+y,maxZ+z,trace,nativeOwner,
+                inflateX+x,inflateY+y,inflateZ+z);
         }
-        @Override public Optional<Vec3> clip(Vec3 a, Vec3 b) {
-            double t = trace.intersect(a.x,a.y,a.z,b.x,b.y,b.z);
-            return Double.isFinite(t) && t >= 0 && t <= 1 ? Optional.of(a.add(b.subtract(a).scale(t))) : Optional.empty();
+        @Override public Optional<Vec3> clip(Vec3 a,Vec3 b) {
+            double t;
+            if(trace instanceof ContextTrace context){
+                AABB ownerBounds=nativeOwner.getBoundingBox();
+                var ownerHit=ownerBounds.inflate(inflateX,inflateY,inflateZ).clip(a,b);
+                double ownerParameter=Double.NaN;
+                if(ownerHit.isPresent()){
+                    var point=ownerHit.get();ownerParameter=NativePrecisionParameters.clipped(a.x,a.y,a.z,b.x,b.y,b.z,point.x,point.y,point.z);
+                }
+                t=context.intersect(new NativePrecisionQuery(a.x,a.y,a.z,b.x,b.y,b.z,inflateX,inflateY,inflateZ,
+                    NativePrecisionQuery.Mode.CLIP,ownerParameter,ownerBounds.minX,ownerBounds.minY,ownerBounds.minZ,
+                    ownerBounds.maxX,ownerBounds.maxY,ownerBounds.maxZ));
+            }else{
+                // The existing hot path does not allocate a context record/array or query the owner.
+                t=trace.intersect(a.x,a.y,a.z,b.x,b.y,b.z);
+            }
+            return Double.isFinite(t)&&t>=0&&t<=1?Optional.of(a.add(b.subtract(a).scale(t))):Optional.empty();
         }
         @Override public boolean contains(double x,double y,double z) {
-            double t=trace.intersect(x,y,z,x,y,z);
+            double t;
+            if(trace instanceof ContextTrace context){
+                AABB ownerBounds=nativeOwner.getBoundingBox();
+                boolean ownerContains=ownerBounds.inflate(inflateX,inflateY,inflateZ).contains(x,y,z);
+                t=context.intersect(new NativePrecisionQuery(x,y,z,x,y,z,inflateX,inflateY,inflateZ,
+                    NativePrecisionQuery.Mode.CONTAINS,ownerContains?0:Double.NaN,ownerBounds.minX,ownerBounds.minY,ownerBounds.minZ,
+                    ownerBounds.maxX,ownerBounds.maxY,ownerBounds.maxZ));
+            }else t=trace.intersect(x,y,z,x,y,z);
             return Double.isFinite(t)&&t>=0&&t<=1;
         }
     }
