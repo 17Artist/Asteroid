@@ -45,27 +45,71 @@ import java.util.stream.Stream;
 final class NativeNavigationBridge {
     private NativeNavigationBridge() {}
     static boolean supportsRetainedHuskFlight(){return PaperCompat.isPaper()&&!PaperCompat.isFolia();}
+    static boolean supportsTargetPreservingNavigation(){return PaperCompat.isPaper()&&!PaperCompat.isFolia();}
+    static boolean supportsTargetPreservingRetainedHuskFlight(){return supportsTargetPreservingNavigation()&&supportsRetainedHuskFlight();}
+    /** Pure live-flight inspection: no navigation/controller admission and no entity/goal writes. */
+    static void requireTargetPreservingFlightGoals(Plugin owner,org.bukkit.entity.Mob entity) {
+        EntityPoseBridge.check();Objects.requireNonNull(owner);Objects.requireNonNull(entity);
+        if(!supportsTargetPreservingRetainedHuskFlight())
+            throw new UnsupportedOperationException("Native flight goal inspection requires Paper without Folia");
+        if(!(entity instanceof CraftEntity craft) || !(craft.getHandle() instanceof Husk host) || host.getClass()!=Husk.class)
+            throw new IllegalArgumentException("Native flight goal inspection requires an exact Husk");
+        World world=entity.getWorld();UUID id=entity.getUniqueId();int tick=MinecraftServer.currentTick;
+        if(!owner.isEnabled()||!entity.isValid()||entity.isDead()||host.isRemoved()||host.isNoAi()||!host.aware
+                ||Bukkit.getEntity(id)!=entity||host.getBukkitEntity()!=entity)
+            throw new IllegalStateException("Native flight goal inspection host is unavailable");
+        requireFlightGoals(host.goalSelector,host.targetSelector);
+        if(!owner.isEnabled()||!entity.isValid()||entity.isDead()||host.isRemoved()||host.isNoAi()||!host.aware
+                ||Bukkit.getEntity(id)!=entity||host.getBukkitEntity()!=entity||entity.getWorld()!=world
+                ||MinecraftServer.currentTick!=tick)
+            throw new IllegalStateException("Native flight goal inspection host changed");
+    }
+    static void requireFlightGoals(GoalSelector primary,GoalSelector targeting) {
+        if(!clearGoals(primary,true,true)||!clearGoals(targeting,true,true))
+            throw new IllegalStateException("Native flight requires both selectors free of MOVE/LOOK/JUMP and foreign non-target goals");
+    }
+
     private static final StackWalker STACK=StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     private static int queriesOnStack;
     static NativeNavigationNMS.NavigationLease open(Plugin owner,org.bukkit.entity.Mob entity) {
+        return open(owner,entity,false);
+    }
+    static NativeNavigationNMS.NavigationLease openPreservingTargets(Plugin owner,org.bukkit.entity.Mob entity) {
+        return open(owner,entity,true);
+    }
+    private static NativeNavigationNMS.NavigationLease open(Plugin owner,org.bukkit.entity.Mob entity,boolean preserveTargets) {
+        if(preserveTargets&&!supportsTargetPreservingNavigation())throw new UnsupportedOperationException("Target-preserving navigation requires Paper without Folia");
         EntityPoseBridge.check();
         if(!PaperCompat.isPaper())throw new UnsupportedOperationException("Native navigation requires Paper 1.21.4");
         if (!(entity instanceof CraftEntity craft) || !(craft.getHandle() instanceof Mob host))
             throw new IllegalArgumentException("Native navigation requires a native Mob");
         if (PaperCompat.isFolia())
             throw new UnsupportedOperationException("Native navigation does not support Folia");
-        return NativeNavigationLease.open(owner,entity,Integer.toUnsignedLong(MinecraftServer.currentTick),()->new Port(host));
+        return NativeNavigationLease.open(owner,entity,Integer.toUnsignedLong(MinecraftServer.currentTick),()->new Port(host,false,preserveTargets));
     }
     static NativeNavigationNMS.NavigationLease openRetained(Plugin owner,org.bukkit.entity.Mob entity,Consumer<NativeNavigationNMS.NavigationLease> retain) {
+        return openRetained(owner,entity,retain,false);
+    }
+    static NativeNavigationNMS.NavigationLease openPreservingTargetsRetained(Plugin owner,org.bukkit.entity.Mob entity,Consumer<NativeNavigationNMS.NavigationLease> retain) {
+        return openRetained(owner,entity,retain,true);
+    }
+    private static NativeNavigationNMS.NavigationLease openRetained(Plugin owner,org.bukkit.entity.Mob entity,Consumer<NativeNavigationNMS.NavigationLease> retain,boolean preserveTargets) {
+        if(preserveTargets&&!supportsTargetPreservingNavigation())throw new UnsupportedOperationException("Target-preserving navigation requires Paper without Folia");
         EntityPoseBridge.check();Objects.requireNonNull(retain);
         if(!PaperCompat.isPaper())throw new UnsupportedOperationException("Native navigation requires Paper 1.21.4");
         if (!(entity instanceof CraftEntity craft) || !(craft.getHandle() instanceof Mob host))
             throw new IllegalArgumentException("Native navigation requires a native Mob");
         if (PaperCompat.isFolia())throw new UnsupportedOperationException("Native navigation does not support Folia");
-        return NativeNavigationLease.openRetained(owner,entity,Integer.toUnsignedLong(MinecraftServer.currentTick),()->new Port(host),retain);
+        return NativeNavigationLease.openRetained(owner,entity,Integer.toUnsignedLong(MinecraftServer.currentTick),()->new Port(host,false,preserveTargets),retain);
     }
     /** Explicit caller-owned configuration, never silently performed by open(). */
     static void prepareSkeleton(Plugin owner,org.bukkit.entity.Mob entity) {
+        prepareSkeleton(owner,entity,false);
+    }
+    static void prepareSkeletonPreservingTargets(Plugin owner,org.bukkit.entity.Mob entity) {
+        prepareSkeleton(owner,entity,true);
+    }
+    private static void prepareSkeleton(Plugin owner,org.bukkit.entity.Mob entity,boolean preserveTargets) {
         EntityPoseBridge.check();
         if (!PaperCompat.isPaper()
                 || PaperCompat.isFolia())
@@ -81,7 +125,7 @@ final class NativeNavigationBridge {
                 || host.isInPowderSnow || Bukkit.getEntity(entity.getUniqueId())!=entity)
             throw new IllegalStateException("Skeleton preparation host is unavailable");
         NativeNavigationLease.requireUnowned(entity);
-        new Port(host,true); // Resolve all native controller/settings fields before either flag write.
+        new Port(host,true,preserveTargets); // Resolve all native controller/settings fields before either flag write.
         SkeletonSetupAccess.ready(); // Resolve BOTH setters before either invocation.
         // Resolve both getters in the same cold phase, including currently unsafe flag values.
         host.shouldBurnInDay(); host.canPickUpLoot();
@@ -91,7 +135,7 @@ final class NativeNavigationBridge {
                 || tick!=Integer.toUnsignedLong(MinecraftServer.currentTick))
             throw new IllegalStateException("Skeleton preparation changed before writing");
         SkeletonSetupAccess.apply(host);
-        if (!owner.isEnabled() || !eligible(host) || entity.getWorld()!=world
+        if (!owner.isEnabled() || !eligible(host,preserveTargets) || entity.getWorld()!=world
                 || Bukkit.getEntity(entity.getUniqueId())!=entity
                 || tick!=Integer.toUnsignedLong(MinecraftServer.currentTick))
             throw new IllegalStateException("Skeleton preparation readback failed");
@@ -137,29 +181,35 @@ final class NativeNavigationBridge {
         });
         if (!permitted) throw new IllegalStateException("Cannot acquire an unowned in-flight native path query");
     }
-    private static boolean clearGoals(GoalSelector selector) {
+    private static boolean clearGoals(GoalSelector selector) { return clearGoals(selector,false,false); }
+    /** Read-only flag admission; never remove, stop or rewrite upstream goals. */
+    private static boolean clearGoals(GoalSelector selector,boolean preserveTargets,boolean facing) {
         var goals=selector.getAvailableGoals();
+        if (!preserveTargets && facing) return goals.isEmpty(); // original strict-facing contract
         if (goals.size()>64) return false;
         int seen=0;
+        long target=1L<<Goal.Flag.TARGET.ordinal();
+        long forbidden=(1L<<Goal.Flag.MOVE.ordinal()) | (preserveTargets?0:target)
+                | (facing?(1L<<Goal.Flag.LOOK.ordinal()) | (1L<<Goal.Flag.JUMP.ordinal()):0);
         for (var wrapped:goals) {
-            if (++seen>64) return false;
-            if (wrapped.getClass()!=WrappedGoal.class
-                    || !vanilla(wrapped.getGoal().getClass())) return false;
-            var flags=wrapped.getFlags();
-            long moving=(1L<<Goal.Flag.MOVE.ordinal()) | (1L<<Goal.Flag.TARGET.ordinal());
-            if ((flags.getBackingSet()&moving)!=0) return false;
+            if (++seen>64 || wrapped.getClass()!=WrappedGoal.class) return false;
+            long flags=wrapped.getFlags().getBackingSet();
+            if ((flags&forbidden)!=0) return false;
+            if (!vanilla(wrapped.getGoal().getClass()) && !(preserveTargets && flags==target)) return false;
         }
         return true;
     }
-    private static boolean eligible(Mob host) { return eligibleBase(host) && stableSpeciesState(host); }
-    private static boolean eligibleBase(Mob host) {
+    private static boolean eligible(Mob host) { return eligible(host,false); }
+    private static boolean eligible(Mob host,boolean preserveTargets) { return eligibleBase(host,preserveTargets) && stableSpeciesState(host); }
+    private static boolean eligibleBase(Mob host) { return eligibleBase(host,false); }
+    private static boolean eligibleBase(Mob host,boolean preserveTargets) {
         double range=host.getAttributeValue(Attributes.FOLLOW_RANGE);
         double baseRange=host.getAttributeBaseValue(Attributes.FOLLOW_RANGE);
         return supportedSpecies(host) && !host.isRemoved() && !host.isNoAi() && host.aware && !host.isPassenger()
                 && host.getLeashData()==null
                 && host.getPassengers().isEmpty() && Double.isFinite(range) && range>=1 && range<=64
                 && Double.isFinite(baseRange) && baseRange>=1 && baseRange<=64
-                && clearGoals(host.goalSelector) && clearGoals(host.targetSelector);
+                && clearGoals(host.goalSelector,preserveTargets,false) && clearGoals(host.targetSelector,preserveTargets,false);
     }
     /** Extend only after auditing the species' native AI phase; Ground alone excludes no Brain writers. */
     private static boolean supportedSpecies(Mob host) {
@@ -240,17 +290,18 @@ final class NativeNavigationBridge {
     }
     private static final class Port implements NativeNavigationLease.Port {
         final Mob host; final GroundPathNavigation previous; final MoveControl previousMove;
-        final Settings settings;
+        final Settings settings;final boolean preserveTargets;
         Follower follower; NavigationControl movement;
         NativeNavigationLease lease; boolean following;
         final NativeMotionRestore restoration=new NativeMotionRestore();
-        Port(Mob host) { this(host,false); }
-        Port(Mob host,boolean preparation) {
-            this.host=host; noForeignQueryOnStack();
+        Port(Mob host) { this(host,false,false); }
+        Port(Mob host,boolean preparation) { this(host,preparation,false); }
+        Port(Mob host,boolean preparation,boolean preserveTargets) {
+            this.host=host;this.preserveTargets=preserveTargets; noForeignQueryOnStack();
             NativeMoveBridge.uncontrolled(host.getBukkitEntity());
             if (!supportedSpecies(host))
                 throw new UnsupportedOperationException("Native navigation supports exact Zombie/Husk/prepared Skeleton only");
-            if (!eligibleBase(host) || (!preparation && !stableSpeciesState(host)))
+            if (!eligibleBase(host,preserveTargets) || (!preparation && !stableSpeciesState(host)))
                 throw new IllegalStateException("Native navigation requires exclusive bounded AI goals/range and stable species state");
             if (host.getNavigation().getClass()!=GroundPathNavigation.class)
                 throw new UnsupportedOperationException("Only exact GroundPathNavigation is supported");
@@ -263,7 +314,7 @@ final class NativeNavigationBridge {
         }
         @Override public long tick() { return Integer.toUnsignedLong(MinecraftServer.currentTick); }
         @Override public void install(NativeNavigationLease value) {
-            if (host.getNavigation()!=previous || host.getMoveControl()!=previousMove || !eligible(host))
+            if (host.getNavigation()!=previous || host.getMoveControl()!=previousMove || !eligible(host,preserveTargets))
                 throw new IllegalStateException("Native navigation changed before installation");
             lease=value;
             follower=new Follower(host,this);
@@ -272,7 +323,7 @@ final class NativeNavigationBridge {
             Fields.set(Fields.NAV,host,follower); Fields.set(Fields.MOVE,host,movement);
         }
         @Override public boolean owned() {
-            return follower!=null && host.getNavigation()==follower && host.getMoveControl()==movement && eligible(host) && settings.matches(follower);
+            return follower!=null && host.getNavigation()==follower && host.getMoveControl()==movement && eligible(host,preserveTargets) && settings.matches(follower);
         }
         @Override public Object query(Point target) {
             if (!owned()) return null;
@@ -320,10 +371,10 @@ final class NativeNavigationBridge {
         static final Field COOLDOWN=Fields.named(LookControl.class,"lookAtCooldown",int.class);
         static final Field LERP=Fields.named(LivingEntity.class,"lerpSteps",int.class);
         static final Field HEAD_LERP=Fields.named(LivingEntity.class,"lerpHeadSteps",int.class);
-        static boolean stable(Mob host,Object body){
+        static boolean stable(Mob host,Object body,boolean preserveTargets){
             return Fields.get(BODY,host)==body&&!host.isSleeping()
                 &&(int)Fields.get(LERP,host)==0&&(int)Fields.get(HEAD_LERP,host)==0
-                &&host.goalSelector.getAvailableGoals().isEmpty()&&host.targetSelector.getAvailableGoals().isEmpty();
+                &&clearGoals(host.goalSelector,preserveTargets,true)&&clearGoals(host.targetSelector,preserveTargets,true);
         }
     }
     private static final class FacingPort implements NativeNavigationLease.FacingPort {
@@ -336,11 +387,11 @@ final class NativeNavigationBridge {
             if(previous.getClass()!=LookControl.class
                     ||body.getClass()!=BodyRotationControl.class)
                 throw new UnsupportedOperationException("Native facing requires exact vanilla LOOK and Body controls");
-            if(!ready())throw new IllegalStateException("Native facing requires idle navigation, empty goals and no pending native angle writer");
+            if(!ready())throw new IllegalStateException("Native facing requires idle navigation, exclusive goal flags and no pending native angle writer");
         }
         private boolean ready(){
             return owner.owned()&&host.getLookControl()==previous&&(int)Fields.get(FacingFields.COOLDOWN,previous)==0
-                &&FacingFields.stable(host,body)&&owner.follower.getPath()==null&&NavigationControl.idle(owner.movement)
+                &&FacingFields.stable(host,body,owner.preserveTargets)&&owner.follower.getPath()==null&&NavigationControl.idle(owner.movement)
                 &&host.xxa==0&&host.yya==0&&host.zza==0&&host.getSpeed()==0
                 &&Float.isFinite(host.getYRot())&&Float.isFinite(host.getXRot())&&Float.isFinite(host.yHeadRot)&&Float.isFinite(host.yBodyRot);
         }
@@ -352,7 +403,7 @@ final class NativeNavigationBridge {
             host.setYRot(yaw);host.setXRot(pitch);host.setYHeadRot(yaw);host.setYBodyRot(yaw);
         }
         @Override public boolean owned(float yaw,float pitch){
-            return frozen!=null&&host.getLookControl()==frozen&&FacingFields.stable(host,body)
+            return frozen!=null&&host.getLookControl()==frozen&&FacingFields.stable(host,body,owner.preserveTargets)
                 &&owner.follower.getPath()==null&&NavigationControl.idle(owner.movement)
                 &&host.xxa==0&&host.yya==0&&host.zza==0&&host.getSpeed()==0
                 &&host.getYRot()==yaw&&host.getXRot()==pitch&&host.yHeadRot==yaw&&host.yBodyRot==yaw;

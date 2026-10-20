@@ -15,8 +15,10 @@ import java.util.function.Predicate;
  * Skeleton requires native daylight burning and loot pickup disabled, no powder-snow exposure or
  * freeze conversion. These conditions and goal ownership are rechecked throughout the lease.
  * No Folia, modern Brain-type
- * species, custom/flying/water/climbing controller. Owner must first remove competing MOVE/TARGET
- * goals; AI remains enabled and aware. Leashed, mounted, dirty or externally driven hosts reject.
+ * species, custom/flying/water/climbing controller. Strict ownership rejects competing MOVE/TARGET
+ * goals; the separate preserving-target entry rejects MOVE but leaves TARGET ownership upstream.
+ * Neither entry removes goals. AI remains enabled and aware. Leashed, mounted, dirty or externally
+ * driven hosts reject.
  */
 public interface NativeNavigationNMS {
     /**
@@ -29,7 +31,41 @@ public interface NativeNavigationNMS {
      * native program operations. Unsupported platforms reject; no Paper-pathfinder fallback.
      */
     default boolean supportsRetainedHuskFlight(){return false;}
+    /** Explicit MOVE-only navigation ownership; old providers reject rather than clearing TARGET goals. */
+    default boolean supportsTargetPreservingNavigation(){return false;}
+    /**
+     * Same retained Husk handoff as above, but reacquired ground/facing ownership preserves TARGET.
+     * Ground still rejects every MOVE goal in either selector; facing/flight must also reject LOOK
+     * and JUMP writers. This capability never admits a host or removes upstream goals by itself.
+     */
+    default boolean supportsTargetPreservingRetainedHuskFlight(){return false;}
+    /**
+     * Read-only, owner-thread check of the exact live native Husk and BOTH current native selector
+     * flag sets, each bounded to 64 goals. Reject MOVE/LOOK/JUMP and foreign non-TARGET-only goals.
+     * Does not acquire a lease, inspect ordinary ground controllers, clear goals or mutate entities;
+     * it remains usable after ground navigation has been replaced by the retained flight driver.
+     * Driving controller identity, physical contact and model ownership remain the caller's existing
+     * flight contract. Paper's typed goal query/cached Goal.getTypes are not a substitute for this.
+     */
+    default void requireTargetPreservingFlightGoals(Plugin owner,Mob host){
+        throw new UnsupportedOperationException("Target-preserving native flight goal inspection is unavailable");
+    }
     NavigationLease controlNavigation(Plugin owner, Mob host);
+    /**
+     * Explicit MOVE-only variant. Both selectors remain intact and may select targets normally.
+     * Every MOVE flag rejects, including TARGET+MOVE. Foreign goals are accepted only when their
+     * declared flags are exactly TARGET; no flags do not prove absence of movement side effects.
+     * Native controllers, route/settings/species checks and exact restoration remain mandatory.
+     * Goal flags are the upstream coordination contract, not a proof against misdeclared code.
+     */
+    default NavigationLease controlNavigationPreservingTargets(Plugin owner,Mob host){
+        throw new UnsupportedOperationException("Target-preserving native navigation is unavailable");
+    }
+    /** Same MOVE-only policy; publish the exact receipt before native writes, never fall back. */
+    default NavigationLease controlNavigationPreservingTargetsRetained(Plugin owner,Mob host,
+            Consumer<NavigationLease> retain){
+        throw new UnsupportedOperationException("Retained target-preserving native navigation is unavailable");
+    }
     /** Exact receipt is published before native writes. Same retained-admission rules as driving. */
     default NavigationLease controlNavigationRetained(Plugin owner,Mob host,
             Consumer<NavigationLease> retain){
@@ -47,6 +83,13 @@ public interface NativeNavigationNMS {
      */
     default void prepareSkeleton(Plugin owner, Mob host) {
         throw new UnsupportedOperationException("Explicit native Skeleton preparation is unavailable");
+    }
+    /**
+     * Same explicit cold Skeleton configuration and partial-failure contract as prepareSkeleton,
+     * using the MOVE-only policy without clearing either selector. Not automatic spawn takeover.
+     */
+    default void prepareSkeletonPreservingTargets(Plugin owner,Mob host){
+        throw new UnsupportedOperationException("Target-preserving native Skeleton preparation is unavailable");
     }
 
     /** Immutable, world-local block/path point. The lease pins the actual World object. */
@@ -70,6 +113,8 @@ public interface NativeNavigationNMS {
      * exact receipt before any native writes; retry close on that same object after failures.
      * A changed angle/controller/host revokes instead of being overwritten. Close restores only
      * the original still-owned control, leaves the final angle, and never rewinds external state.
+     * On preserving-target navigation, both selectors must remain free of MOVE/LOOK/JUMP;
+     * TARGET-only goals remain installed. A strict navigation lease still requires empty selectors.
      */
     interface FacingLease extends AutoCloseable {
         boolean current();

@@ -120,6 +120,13 @@ public class EntityNMSImpl extends AbstractNativeModelMountNMS implements IEntit
     }
 
     @Override public boolean supportsRetainedHuskFlight(){return NativeNavigationBridge.supportsRetainedHuskFlight();}
+    @Override public boolean supportsTargetPreservingNavigation(){return NativeNavigationBridge.supportsTargetPreservingNavigation();}
+    @Override public boolean supportsTargetPreservingRetainedHuskFlight(){return NativeNavigationBridge.supportsTargetPreservingRetainedHuskFlight();}
+    @Override public void requireTargetPreservingFlightGoals(Plugin owner,org.bukkit.entity.Mob host){NativeNavigationBridge.requireTargetPreservingFlightGoals(owner,host);}
+    @Override public NativeNavigationNMS.NavigationLease controlNavigationPreservingTargets(Plugin owner,org.bukkit.entity.Mob host){return NativeNavigationBridge.openPreservingTargets(owner,host);}
+    @Override public NativeNavigationNMS.NavigationLease controlNavigationPreservingTargetsRetained(Plugin owner,org.bukkit.entity.Mob host,Consumer<NativeNavigationNMS.NavigationLease> retain){return NativeNavigationBridge.openPreservingTargetsRetained(owner,host,retain);}
+    @Override public void prepareSkeletonPreservingTargets(Plugin owner,org.bukkit.entity.Mob host){NativeNavigationBridge.prepareSkeletonPreservingTargets(owner,host);}
+
     @Override public NativeNavigationNMS.NavigationLease controlNavigation(Plugin owner,Mob host){return NativeNavigationBridge.open(owner,host);}
     @Override public NativeNavigationNMS.NavigationLease controlNavigationRetained(Plugin owner,Mob host,Consumer<NativeNavigationNMS.NavigationLease> retain){return NativeNavigationBridge.openRetained(owner,host,retain);}
     @Override public void prepareSkeleton(Plugin owner,Mob host){NativeNavigationBridge.prepareSkeleton(owner,host);}

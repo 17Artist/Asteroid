@@ -16,3 +16,7 @@ Thumbs.db
 
 # Test servers
 test-servers/
+
+# Logs and compressed archives
+*.log
+*.gz

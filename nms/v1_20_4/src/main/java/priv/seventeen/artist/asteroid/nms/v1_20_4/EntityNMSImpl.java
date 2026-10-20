@@ -102,6 +102,13 @@ public class EntityNMSImpl extends AbstractNativeModelMountNMS implements IEntit
     @Override public void prepareSkeleton(Plugin owner,org.bukkit.entity.Mob entity){NativeNavigationBridge.prepareSkeleton(owner,entity);}
 
     @Override public boolean supportsRetainedHuskFlight(){return NativeNavigationBridge.supportsRetainedHuskFlight();}
+    @Override public boolean supportsTargetPreservingNavigation(){return NativeNavigationBridge.supportsTargetPreservingNavigation();}
+    @Override public boolean supportsTargetPreservingRetainedHuskFlight(){return NativeNavigationBridge.supportsTargetPreservingRetainedHuskFlight();}
+    @Override public void requireTargetPreservingFlightGoals(Plugin owner,org.bukkit.entity.Mob host){NativeNavigationBridge.requireTargetPreservingFlightGoals(owner,host);}
+    @Override public NativeNavigationNMS.NavigationLease controlNavigationPreservingTargets(Plugin owner,org.bukkit.entity.Mob host){return NativeNavigationBridge.openPreservingTargets(owner,host);}
+    @Override public NativeNavigationNMS.NavigationLease controlNavigationPreservingTargetsRetained(Plugin owner,org.bukkit.entity.Mob host,Consumer<NativeNavigationNMS.NavigationLease> retain){return NativeNavigationBridge.openPreservingTargetsRetained(owner,host,retain);}
+    @Override public void prepareSkeletonPreservingTargets(Plugin owner,org.bukkit.entity.Mob host){NativeNavigationBridge.prepareSkeletonPreservingTargets(owner,host);}
+
 
     @Override public void move(Entity entity,NativeMovementNMS.Input input){NativeMoveBridge.move(entity,input);}
     @Override public boolean supportsDriving(){return true;}
